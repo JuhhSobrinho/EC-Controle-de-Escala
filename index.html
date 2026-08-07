@@ -205,14 +205,15 @@
 <div class="panel" id="utilizacao">
   <div class="content">
 
-    <!-- DATE NAV -->
-    <div class="util-date-nav">
-      <button onclick="changeDate(-7)">« -7d</button>
-      <button onclick="changeDate(-1)">‹</button>
-      <input type="date" id="date-picker" onchange="setDate(this.value)">
-      <span id="current-date-label" style="font-size:13px;font-weight:600;color:var(--text2);min-width:160px;text-align:center"></span>
-      <button onclick="changeDate(1)">›</button>
-      <button onclick="changeDate(7)">+7d »</button>
+    <!-- PERIOD NAV -->
+    <div class="util-date-nav" style="flex-wrap:wrap">
+      <button onclick="shiftUtilPeriod(-1)">« Período anterior</button>
+      <label style="font-size:11px;color:var(--text3);margin-left:6px">De</label>
+      <input type="date" id="util-from" onchange="setUtilPeriod()">
+      <label style="font-size:11px;color:var(--text3)">Até</label>
+      <input type="date" id="util-to" onchange="setUtilPeriod()">
+      <button onclick="shiftUtilPeriod(1)">Próximo período »</button>
+      <span id="current-date-label" style="font-size:12px;font-weight:500;color:var(--text3);margin-left:6px"></span>
     </div>
 
     <!-- KPIs -->
@@ -228,11 +229,11 @@
     <!-- CHARTS ROW -->
     <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px">
       <div class="chart-card">
-        <h3 class="chart-card-title">Evolução — Utilização % (últimos 30 dias)</h3>
+        <h3 class="chart-card-title">Evolução — Utilização % no período</h3>
         <div style="position:relative;height:200px"><canvas id="trendChart"></canvas></div>
       </div>
       <div class="chart-card">
-        <h3 class="chart-card-title">Distribuição na data</h3>
+        <h3 class="chart-card-title">Distribuição no período</h3>
         <div style="position:relative;height:200px;display:flex;align-items:center;justify-content:center">
           <canvas id="donutChart"></canvas>
           <div style="position:absolute;text-align:center;pointer-events:none">

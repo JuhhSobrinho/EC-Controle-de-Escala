@@ -331,7 +331,7 @@ function renderProfList(){
 /* ════════════════════════════════════════════════════
    UTILIZAÇÃO — lê direto de TECS e DATES
    ════════════════════════════════════════════════════ */
-var _utilDate='', _utilFilter='todos';
+var _utilFrom='', _utilTo='', _utilFilter='todos';
 var _utilTrendChart=null, _utilDonutChart=null;
 
 var UTIL_LABELS={operacao:'Em Operação',folga_emb:'Folga Embarque',disponivel:'Disponível',
@@ -389,35 +389,76 @@ function _util_statsForDate(iso){
   return r;
 }
 
-function setDate(d){
-  _utilDate=d;
-  var dp=document.getElementById('date-picker'); if(dp) dp.value=d;
-  var dt=new Date(d+'T12:00:00');
+/* Estatísticas agregadas do período [fromISO,toISO]: % médio de cada categoria
+   (dias sem status lançado não entram no denominador das porcentagens, só na
+   distribuição do gráfico de rosca, como "sem_info"). */
+function _util_statsForPeriod(fromISOv, toISOv){
+  if(!fromISOv || !toISOv) return null;
+  var catCounts={}, withData=0, opN=0, folgaN=0, dispN=0, afN=0;
+  TECS.forEach(function(t){
+    DATES.forEach(function(dmy,di){
+      var iso=toISO(dmy);
+      if(iso<fromISOv || iso>toISOv) return;
+      var v=t.d[di]||'';
+      var cat=_util_classify(v);
+      catCounts[cat]=(catCounts[cat]||0)+1;
+      if(!v) return;
+      withData++;
+      if(cat==='operacao'||cat==='embarque') opN++;
+      else if(cat==='folga_emb') folgaN++;
+      else if(cat==='disponivel'||cat==='mobilizacao') dispN++;
+      else if(cat==='afastado'||cat==='ferias') afN++;
+    });
+  });
+  function pct(n){ return withData>0 ? Math.round(n/withData*100) : 0; }
+  return {total:TECS.length, opPct:pct(opN), folgaPct:pct(folgaN), dispPct:pct(dispN), afPct:pct(afN), util:pct(opN), cats:catCounts};
+}
+function toISO_local(dmy){ return toISO(dmy); } // apelido só pra deixar claro, dentro desta função, que é conversão DMY→ISO
+
+function setUtilPeriod(){
+  var fromEl=document.getElementById('util-from');
+  var toEl=document.getElementById('util-to');
+  _utilFrom=fromEl?fromEl.value:'';
+  _utilTo=toEl?toEl.value:'';
+  if(_utilFrom && _utilTo && _utilFrom>_utilTo){
+    var tmp=_utilFrom; _utilFrom=_utilTo; _utilTo=tmp;
+    if(fromEl) fromEl.value=_utilFrom;
+    if(toEl) toEl.value=_utilTo;
+  }
   var lbl=document.getElementById('current-date-label');
-  if(lbl) lbl.textContent=dt.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+  if(lbl){
+    if(_utilFrom && _utilTo){
+      var days=Math.round((new Date(_utilTo)-new Date(_utilFrom))/86400000)+1;
+      lbl.textContent=days+' dia'+(days!==1?'s':'')+' no período';
+    } else lbl.textContent='';
+  }
   _util_updateKPIs();
   _util_renderTable();
   _util_updateDonut();
+  _util_renderTrend();
 }
 
-function changeDate(delta){
-  var dates=DATES.map(_util_dmy2iso);
-  var idx=dates.indexOf(_utilDate);
-  if(idx<0) return;
-  var ni=Math.max(0,Math.min(dates.length-1,idx+delta));
-  setDate(dates[ni]);
+function shiftUtilPeriod(dir){
+  if(!_utilFrom || !_utilTo) return;
+  var from=new Date(_utilFrom+'T12:00:00'), to=new Date(_utilTo+'T12:00:00');
+  var spanDays=Math.round((to-from)/86400000)+1;
+  from.setDate(from.getDate()+dir*spanDays);
+  to.setDate(to.getDate()+dir*spanDays);
+  document.getElementById('util-from').value=from.toISOString().slice(0,10);
+  document.getElementById('util-to').value=to.toISOString().slice(0,10);
+  setUtilPeriod();
 }
 
 function _util_updateKPIs(){
-  var s=_util_statsForDate(_utilDate); if(!s) return;
+  var s=_util_statsForPeriod(_utilFrom,_utilTo); if(!s) return;
   function el(id,v){var e=document.getElementById(id);if(e)e.textContent=v;}
-  el('kpi-total',s.total); el('kpi-op',s.op); el('kpi-folga',s.folga);
-  el('kpi-disp',s.disp); el('kpi-af',s.af);
+  el('kpi-total',s.total); el('kpi-op',s.opPct+'%'); el('kpi-folga',s.folgaPct+'%');
+  el('kpi-disp',s.dispPct+'%'); el('kpi-af',s.afPct+'%');
   el('kpi-util',s.util+'%'); el('kpi-idle','ociosidade: '+(100-s.util)+'%');
 }
 
 function _util_updateDonut(){
-  var s=_util_statsForDate(_utilDate); if(!s) return;
+  var s=_util_statsForPeriod(_utilFrom,_utilTo); if(!s) return;
   var el=document.getElementById('donut-pct'); if(el) el.textContent=s.util+'%';
   var ctx=document.getElementById('donutChart'); if(!ctx) return;
   if(_utilDonutChart){_utilDonutChart.destroy();_utilDonutChart=null;}
@@ -434,10 +475,11 @@ function _util_updateDonut(){
 function _util_renderTrend(){
   var ctx=document.getElementById('trendChart'); if(!ctx) return;
   if(_utilTrendChart){_utilTrendChart.destroy();_utilTrendChart=null;}
-  var allISO=DATES.map(_util_dmy2iso);
-  var todayIdx=allISO.indexOf(_utilDate);
-  var start=Math.max(0,todayIdx-29);
-  var slice=allISO.slice(start,todayIdx+1);
+  if(!_utilFrom || !_utilTo) return;
+  var slice=DATES.map(_util_dmy2iso).filter(function(iso){return iso>=_utilFrom && iso<=_utilTo;});
+  // período longo: amostra os pontos pra não poluir o eixo X (igual ao gráfico do Dashboard)
+  var step=Math.max(1,Math.floor(slice.length/60));
+  slice=slice.filter(function(_,i){return i%step===0;});
   var utilPct=slice.map(function(d){var s=_util_statsForDate(d);return s?s.util:0;});
   var labels=slice.map(function(d){return d.slice(5);});
   _utilTrendChart=new Chart(ctx,{
@@ -456,16 +498,21 @@ function _util_renderTrend(){
 }
 
 function _util_renderTable(){
-  var dmy=_util_iso2dmy(_utilDate), di=DATES.indexOf(dmy);
+  // "Status"/"Projeto" mostram a foto do último dia do período selecionado
+  var di = _utilTo ? idxOf(_util_iso2dmy(_utilTo)) : null;
   var search=(document.getElementById('search')||{value:''}).value.toLowerCase();
   var rows='';
   TECS.forEach(function(t){
     if(search&&t.n.toLowerCase().indexOf(search)<0&&(t.f||'').toLowerCase().indexOf(search)<0) return;
-    var cat=_util_classify(di>=0?t.d[di]||'':'');
+    var status=(di!==null?t.d[di]:'')||'';
+    var cat=_util_classify(status);
     if(_utilFilter!=='todos'&&cat!==_utilFilter) return;
-    var status=di>=0?t.d[di]||'':'';
+    // Utilização % escopada ao mesmo período De/Até selecionado acima
     var opD=0,totD=0;
     DATES.forEach(function(d2,di2){
+      var iso=toISO(d2);
+      if(_utilFrom && iso<_utilFrom) return;
+      if(_utilTo && iso>_utilTo) return;
       if(!t.d[di2]) return; totD++;
       var c2=_util_classify(t.d[di2]);
       if(c2==='operacao'||c2==='embarque') opD++;
@@ -482,7 +529,7 @@ function _util_renderTable(){
     rows+='</tr>';
   });
   var tb=document.getElementById('table-body');
-  if(tb) tb.innerHTML=rows||'<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text3)">Sem dados para esta data</td></tr>';
+  if(tb) tb.innerHTML=rows||'<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text3)">Sem dados para este período</td></tr>';
 }
 function renderTable(){_util_renderTable();}
 
@@ -701,10 +748,20 @@ function initUtil(){
   if(!allISO.length) return;
   var todayISO=new Date().toISOString().slice(0,10);
   var closest=allISO.filter(function(d){return d<=todayISO;}).pop()||allISO[0];
-  setDate(closest);
-  _util_renderTrend();
+
+  // Período padrão dos KPIs/gráficos/tabela: últimos 30 dias até hoje
+  var utilFromEl=document.getElementById('util-from');
+  var utilToEl=document.getElementById('util-to');
+  if(utilToEl) utilToEl.value=closest;
+  if(utilFromEl){
+    var d0=new Date(closest+'T12:00:00');
+    d0.setDate(d0.getDate()-29);
+    utilFromEl.value=d0.toISOString().slice(0,10);
+  }
+  setUtilPeriod();
   _util_buildFilters();
-  // Set default date range: last 30 days
+
+  // Set default date range: last 30 days (Horas por Projeto / Horas por Técnico)
   var toEl=document.getElementById('hrs-to');
   var fromEl=document.getElementById('hrs-from');
   if(toEl) toEl.value=closest;
