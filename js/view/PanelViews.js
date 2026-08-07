@@ -601,7 +601,7 @@ function _util_renderTecHours(){
   var toISOv=toEl?toEl.value:'';
 
   var projMap={};
-  var totalPrev=0, totalReal=0, totalPto=0;
+  var totalPrev=0, totalReal=0, totalPto=0, totalFolgaProj=0;
   DATES.forEach(function(dmy,di){
     var iso=toISO(dmy);
     if(fromISOv&&iso<fromISOv) return;
@@ -611,6 +611,9 @@ function _util_renderTecHours(){
     var u=s.toUpperCase();
     var cat=getCategory(u);
     if(cat==='pto') totalPto+=hrsForCat('pto');
+    // dia marcado como folga (folga_override) mas o status é embarque/projeto —
+    // ou seja, trabalhou num dia que deveria ser de folga
+    if(t.fo[di] && cat==='proj') totalFolgaProj+=hrsForCat('proj');
     if(cat!=='proj') return; // só entra na tabela se for embarque/projeto de fato
     var proj=u.replace('P-MXL','PMXL').replace('P MXL','PMXL');
     if(!projMap[proj]) projMap[proj]={proj:proj,days:0,prev:0,real:0};
@@ -648,7 +651,8 @@ function _util_renderTecHours(){
     summary.style.display='flex';
     summary.innerHTML='<span>Horas Totais Prev.: <b style="color:var(--femb)">'+totalPrev+'h</b></span>'
       +'<span>Horas Totais Reais: <b style="color:var(--emb)">'+(totalReal>0?Math.round(totalReal)+'h':'—')+'</b></span>'
-      +'<span>Horas 100% (folga/disponível): <b style="color:var(--accent)">'+totalPto+'h</b></span>';
+      +'<span>Folga/Disponível: <b style="color:var(--accent)">'+totalPto+'h</b></span>'
+      +'<span>Horas 100% Projeto (trabalhou em dia de folga): <b style="color:var(--st-femb)">'+totalFolgaProj+'h</b></span>';
   }
 }
 
