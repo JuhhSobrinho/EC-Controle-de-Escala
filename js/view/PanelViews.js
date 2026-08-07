@@ -216,36 +216,38 @@ function buildMetrics(){
   }).join('');
 }
 function buildBars(){
-  var idx=[];for(var i=dashS;i<=dashE;i++)idx.push(i);
-  var total=idx.length;
-  var data=TECS.map(function(t){
-    var worked=idx.filter(function(i){var u=(t.d[i]||'').trim().toUpperCase();return u&&u.indexOf('F.EMB')!==0&&u!=='DES'&&u!=='DES.'&&u.indexOf('DISP')!==0&&u.indexOf('MOB')!==0&&u!=='BASE'&&u!=='HOTEL'&&u!=='RECAP'&&u.indexOf('AFAS')!==0;}).length;
-    return {n:t.n,p:t.p,rp:total>0?worked/total:0};
-  }).filter(function(t){return t.rp>0||t.p>0;}).sort(function(a,b){return b.rp-a.rp;});
-  var maxP=data.reduce(function(m,t){return Math.max(m,t.rp);},0.01);
+  // Escala 0%–100%–200% de carga (t.p, o mesmo "Carga" usado no resto do app):
+  // 0% = muito mal utilizado, 100% = uso moderado (ideal), 200% = muito utilizado.
+  var data=TECS.map(function(t){ return {n:t.n,p:t.p}; }).sort(function(a,b){return b.p-a.p;});
   document.getElementById('bars').innerHTML=data.map(function(t){
-    var p=(t.rp*100).toFixed(0),w=(t.rp/maxP*100).toFixed(1);
-    var gcol=t.p>1.15?'#e85b5b':t.p<0.9&&t.p>0?'#f5a623':'#1fc98e';
-    var gp=t.p>0?(t.p*100).toFixed(0)+'%':'—';
+    var p=(t.p*100).toFixed(0), w=Math.min(t.p/2*100,100).toFixed(1);
+    var gcol=pctCol(t.p);
+    var label = t.p>1.15?'Muito utilizado':t.p<0.9?'Muito mal utilizado':'Uso moderado';
     var nm=t.n.split(' ').slice(0,2).join(' ');
-    return '<div class="hbar-row"><div class="hbar-name" title="'+t.n+'">'+nm+'</div>'
+    return '<div class="hbar-row"><div class="hbar-name" title="'+t.n+' — '+label+'">'+nm+'</div>'
       +'<div class="hbar-track"><div class="hbar-fill" style="width:'+w+'%;background:'+gcol+'"></div></div>'
       +'<div class="hbar-pct">'+p+'%</div>'
-      +'<div style="font-size:10px;color:'+gcol+';font-family:JetBrains Mono,monospace;width:34px;text-align:right;flex-shrink:0">'+gp+'</div></div>';
+      +'<div style="font-size:10px;color:'+gcol+';font-family:JetBrains Mono,monospace;width:100px;text-align:right;flex-shrink:0">'+label+'</div></div>';
   }).join('');
 }
 function buildPie(){
   var idx=[];for(var i=dashS;i<=dashE;i++)idx.push(i);
-  var ct={EMB:0,FEMB:0,PROJ:0,DES:0,DISP:0,MOB:0,AF:0,BASE:0};
-  TECS.forEach(function(t){idx.forEach(function(i){var v=t.d[i];if(!v)return;var u=v.trim().toUpperCase();if(u==='EMB'||u==='EMB.')ct.EMB++;else if(u.indexOf('F.EMB')===0)ct.FEMB++;else if(u==='DES'||u==='DES.')ct.DES++;else if(u.indexOf('DISP')===0)ct.DISP++;else if(u.indexOf('MOB')===0)ct.MOB++;else if(u.indexOf('AFAS')===0)ct.AF++;else if(u==='BASE'||u==='HOTEL'||u==='RECAP')ct.BASE++;else if(u)ct.PROJ++;});});
+  // Embarcado (EMB/EMB.) e Projeto são a mesma coisa (estar num projeto/plataforma é estar embarcado) — uma fatia só.
+  var ct={EMBPROJ:0,FEMB:0,DES:0,DISP:0,MOB:0,AF:0,BASE:0};
+  TECS.forEach(function(t){idx.forEach(function(i){var v=t.d[i];if(!v)return;var u=v.trim().toUpperCase();if(u.indexOf('F.EMB')===0)ct.FEMB++;else if(u==='DES'||u==='DES.')ct.DES++;else if(u.indexOf('DISP')===0)ct.DISP++;else if(u.indexOf('MOB')===0)ct.MOB++;else if(u.indexOf('AFAS')===0)ct.AF++;else if(u==='BASE'||u==='HOTEL'||u==='RECAP')ct.BASE++;else if(u)ct.EMBPROJ++;});});
+  var total=Object.keys(ct).reduce(function(s,k){return s+ct[k];},0);
   if(pieChart){pieChart.destroy();pieChart=null;}
   pieChart=new Chart(document.getElementById('pieC'),{type:'doughnut',
-    data:{labels:['Embarcado','Folga emb.','Projeto','Desembarque','Disponível','Mobilização','Afastado','Base/Hotel'],
-      datasets:[{data:[ct.EMB,ct.FEMB,ct.PROJ,ct.DES,ct.DISP,ct.MOB,ct.AF,ct.BASE],
-        backgroundColor:['#2f4bd0','#1fc98e','#a78bfa','#7dd3fc','#fb923c','#4a9eff','#e85b5b','#64748b'],borderWidth:0,hoverOffset:4}]},
+    data:{labels:['Embarcado/Projeto','Folga emb.','Desembarque','Disponível','Mobilização','Afastado','Base/Hotel'],
+      datasets:[{data:[ct.EMBPROJ,ct.FEMB,ct.DES,ct.DISP,ct.MOB,ct.AF,ct.BASE],
+        backgroundColor:['#2f4bd0','#1fc98e','#7dd3fc','#fb923c','#4a9eff','#e85b5b','#64748b'],borderWidth:0,hoverOffset:4}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'62%',
       plugins:{legend:{position:'right',labels:{color:'#8a91a8',font:{size:11,family:'Inter'},boxWidth:10,padding:10,
-        generateLabels:function(ch){var ds=ch.data.datasets[0];return ch.data.labels.map(function(l,i){return {text:l+'  '+ds.data[i],fillStyle:ds.backgroundColor[i],strokeStyle:'transparent',fontColor:'#8a91a8',index:i};});}}}}
+        generateLabels:function(ch){var ds=ch.data.datasets[0];return ch.data.labels.map(function(l,i){
+          var v=ds.data[i], pct=total>0?Math.round(v/total*100):0;
+          return {text:l+'  '+v+' ('+pct+'%)',fillStyle:ds.backgroundColor[i],strokeStyle:'transparent',fontColor:'#8a91a8',index:i};
+        });}}},
+        tooltip:{callbacks:{label:function(ctx){var v=ctx.parsed, pct=total>0?Math.round(v/total*100):0; return ctx.label+': '+v+' ('+pct+'%)';}}}}
     }
   });
 }
