@@ -149,8 +149,11 @@ td.day-cell.bba{background:var(--base);color:#fff;font-weight:700}
 :root.light td.day-cell.bde,:root.light td.day-cell.bdi,:root.light td.day-cell.bmo,
 :root.light td.day-cell.baf,:root.light td.day-cell.bba{color:#fff}
 .empty-dot{color:var(--text3);font-size:16px;opacity:.2}
-/* folga override: trabalhando em dia de F.EMB — anel ao redor da célula toda */
+/* folga override: anel ao redor da célula toda */
 td.day-cell.folga-over{box-shadow:inset 0 0 0 3px var(--st-femb);z-index:1}
+/* quando o status do dia já é F.EMB (verde), o anel verde some em cima do próprio fundo verde —
+   nesse caso específico usa branco + contorno escuro pra continuar visível */
+td.day-cell.bfe.folga-over{box-shadow:inset 0 0 0 3px #fff,inset 0 0 0 4px #0b0f14}
 .name-cell{display:flex;align-items:center;gap:6px;min-width:0}
 .name-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;cursor:pointer}
 .name-text:hover{color:var(--accent)}
