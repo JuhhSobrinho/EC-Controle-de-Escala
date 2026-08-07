@@ -95,8 +95,8 @@ function buildTable(){
       var wkH=isWeekend(DATES[hi])?' weekend-col':'';
       var isPrev = hi >= T_IDX;
       var prevCls = isPrev ? ' hrs-future' : '';
-      // check for imported real hours
-      var realHr = window._realHrs && window._realHrs[ti] && window._realHrs[ti][DATES[hi]];
+      // check for imported real hours (persistido em escala.hr_reais)
+      var realHr = t.hr[hi];
       h+='<div class="hrs-cell'+tcH+wkH+'">'
         +(realHr
           ? '<span class="hrs-real'+(isPrev?' fut':'')+'" title="Horas reais">'+realHr+'</span>'

@@ -1,7 +1,7 @@
 /* ── AppState: estado em memória da aplicação + helpers de data/status ──
    TECS[ti] = {id (tecnico_id no banco), n,f,s,df,dt,p,lrs,lcr,irata,
-               d[] (status por dia), fo[] (folga_override por dia), rowId[] (id da linha em `escala`, ou null),
-               _edits{}} */
+               d[] (status por dia), fo[] (folga_override por dia), hr[] (hr_reais por dia, importado),
+               rowId[] (id da linha em `escala`, ou null), _edits{}} */
 /* Calendário gerado dinamicamente (1 ano antes até 1 ano depois de hoje), em vez do
    SEED.dates fixo — que parava em 02/07/2026 e por isso "hoje" e os meses seguintes
    deixavam de existir na grade (avançar mês não fazia nada, Utilização ficava vazia). */
@@ -68,6 +68,7 @@ var AppState = {
       lrs: r.lrs, lcr: r.lcr, irata: r.irata,
       d: new Array(DATES.length).fill(''),
       fo: new Array(DATES.length).fill(0),
+      hr: new Array(DATES.length).fill(null),
       rowId: new Array(DATES.length).fill(null),
       _edits: {}
     };
@@ -92,6 +93,7 @@ var AppState = {
         if(di === null) { skipped++; return; }
         t.d[di] = row.status || '';
         t.fo[di] = row.folga_override || 0;
+        t.hr[di] = row.hr_reais ? row.hr_reais.slice(0,5) : null;
         t.rowId[di] = row.id;
       });
       if(skipped) console.warn('AppState.load: '+skipped+' linhas de escala fora do calendário carregado (ignoradas).');
@@ -101,6 +103,7 @@ var AppState = {
       TECS = JSON.parse(JSON.stringify(SEED.tec));
       TECS.forEach(function(t){
         t.fo = new Array(DATES.length).fill(0);
+        t.hr = new Array(DATES.length).fill(null);
         t.rowId = new Array(DATES.length).fill(null);
         t.id = null;
       });

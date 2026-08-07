@@ -1,4 +1,4 @@
-/* ── ImportController: importar horas reais de um .xlsx (fica em memória, window._realHrs) ── */
+/* ── ImportController: importar horas reais de um .xlsx e salvar em escala.hr_reais ── */
 var _importData = null; // parsed rows from xlsx
 var _importMap  = {};   // xlsxName → ti (tec index), set by user via dropdowns
 
@@ -110,9 +110,13 @@ function closeImport(){
   document.getElementById('importOverlay').classList.remove('open');
 }
 
-function applyImport(){
+async function applyImport(){
   if(!_importData)return;
-  var applied=0, skipped=0;
+
+  if(AppState.offline){
+    toast('Sem conexão com o banco — não é possível salvar', '#e85b5b');
+    return;
+  }
 
   // build lookup: ti → { 'dd/mm/yyyy': 'HH:MM' }
   var hrsMap={};
@@ -141,17 +145,42 @@ function applyImport(){
     hrsMap[ti][dmy]=htStr;
   });
 
-  // apply to _realHrs store (separate from status data)
-  if(!window._realHrs)window._realHrs={};
-  Object.keys(hrsMap).forEach(function(ti){
-    if(!window._realHrs[ti])window._realHrs[ti]={};
-    Object.keys(hrsMap[ti]).forEach(function(dmy){
-      window._realHrs[ti][dmy]=hrsMap[ti][dmy];
-      applied++;
-    });
-  });
+  var impApplyBtn=document.getElementById('impApplyBtn');
+  if(impApplyBtn) impApplyBtn.disabled=true;
+  toast('Salvando horas no banco...', '#8a91a8');
 
+  var applied=0, skipped=0, errors=0;
+
+  await Promise.all(Object.keys(hrsMap).map(async function(tiStr){
+    var ti=parseInt(tiStr);
+    var t=TECS[ti];
+    if(!t) return;
+    var days=[];
+    Object.keys(hrsMap[ti]).forEach(function(dmy){
+      var di=idxOf(dmy);
+      if(di===null){ skipped++; return; }
+      days.push({iso: toISO(DATES[di]), rowId: t.rowId[di], patch: {hr_reais: hrsMap[ti][dmy]}, di: di});
+    });
+    if(!days.length) return;
+    try{
+      var rows=await EscalaModel.saveRange(t.id, days);
+      rows.forEach(function(row, idx){
+        var di=days[idx].di;
+        t.d[di]=row.status||'';
+        t.fo[di]=row.folga_override||0;
+        t.hr[di]=row.hr_reais?row.hr_reais.slice(0,5):null;
+        t.rowId[di]=row.id;
+        applied++;
+      });
+    }catch(e){
+      console.error('applyImport', t.n, e);
+      errors+=days.length;
+    }
+  }));
+
+  if(impApplyBtn) impApplyBtn.disabled=false;
   closeImport();
   buildTable(); // re-render to show real hrs in leque
-  toast('✓ '+applied+' horas importadas','#1fc98e');
+  var msg='✓ '+applied+' horas salvas no banco'+(skipped?' · '+skipped+' fora do calendário':'')+(errors?' · '+errors+' com erro':'');
+  toast(msg, errors?'#e85b5b':'#1fc98e');
 }

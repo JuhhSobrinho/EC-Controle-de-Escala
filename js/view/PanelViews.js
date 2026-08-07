@@ -34,11 +34,33 @@ function fmtHrs(h){
   if(h===0) return '—';
   return h+'h';
 }
-function buildWeeklySummary(){
-  // June 2026 weeks (Mon–Sun, clipped to June)
-  var JUN_YEAR=2026, JUN_MONTH=5; // 0-indexed
+var MONTH_NAMES_PT=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+var _wsYear=null, _wsMonth=null; // mês selecionado no Resumo de horas (null = ainda não inicializado)
+
+/* Mês padrão = último mês completo (o mês atual ainda está em andamento, então
+   um resumo dele fica incompleto — mostrar o anterior faz mais sentido). */
+function defaultWeeklySummaryMonth(){
+  var now=new Date();
+  var m=now.getMonth()-1, y=now.getFullYear();
+  if(m<0){ m=11; y--; }
+  return {year:y, month:m};
+}
+
+function changeWeeklySummaryMonth(value){
+  var p=value.split('-');
+  buildWeeklySummary(parseInt(p[0]),parseInt(p[1]));
+}
+
+function buildWeeklySummary(year, month){
+  if(year===undefined || month===undefined){
+    if(_wsYear===null){ var d=defaultWeeklySummaryMonth(); _wsYear=d.year; _wsMonth=d.month; }
+    year=_wsYear; month=_wsMonth;
+  } else {
+    _wsYear=year; _wsMonth=month;
+  }
+  var JUN_YEAR=year, JUN_MONTH=month; // 0-indexed
   var junStart = new Date(JUN_YEAR,JUN_MONTH,1);
-  var junEnd   = new Date(JUN_YEAR,JUN_MONTH,30);
+  var junEnd   = new Date(JUN_YEAR,JUN_MONTH+1,0); // último dia do mês
   // build week list: find Monday of first week
   var cur = new Date(junStart);
   cur.setDate(cur.getDate() - ((cur.getDay()+6)%7)); // back to Monday
@@ -86,10 +108,19 @@ function buildWeeklySummary(){
       if(cat) data[ti][dw.wi][cat]+=hrsForCat(cat);
     });
   });
+  // opções do seletor de mês: mês atual + 12 meses anteriores
+  var now=new Date(), monthOpts='';
+  for(var mi=0; mi<13; mi++){
+    var my=now.getFullYear(), mm=now.getMonth()-mi;
+    while(mm<0){ mm+=12; my--; }
+    var sel=(my===year && mm===month)?' selected':'';
+    monthOpts+='<option value="'+my+'-'+mm+'"'+sel+'>'+MONTH_NAMES_PT[mm]+' '+my+'</option>';
+  }
   // build HTML
   var COLS=cats.length; // 4 categories per week
   var h='<div class="weekly-wrap">';
-  h+='<div class="weekly-title">Resumo de horas — Junho 2026</div>';
+  h+='<div class="weekly-title"><span>Resumo de horas — '+MONTH_NAMES_PT[month]+' '+year+'</span>'
+    +'<select class="form-input" style="width:auto;margin-left:auto;font-size:12px;padding:4px 8px;text-transform:none;letter-spacing:normal;font-weight:400" onchange="changeWeeklySummaryMonth(this.value)">'+monthOpts+'</select></div>';
   h+='<div class="weekly-outer"><table class="wtbl">';
   // header row 1: name + week labels (spanning 4 cols each) + total
   h+='<thead><tr>';
@@ -97,7 +128,7 @@ function buildWeeklySummary(){
   weeks.forEach(function(w,wi){
     h+='<th class="week-head" colspan="'+COLS+'">'+(wi===0?'':'')+w.label+'</th>';
   });
-  h+='<th class="week-head" colspan="'+COLS+'">Total Jun.</th>';
+  h+='<th class="week-head" colspan="'+COLS+'">Total '+MONTH_NAMES_PT[month].slice(0,3)+'.</th>';
   h+='</tr>';
   // header row 2: category labels per week
   h+='<tr class="cat-row">';
@@ -505,8 +536,8 @@ function _util_renderHours(){
       // Hours
       var hrs=11; // default EMB hours
       projMap[proj].horasPrev+=hrs;
-      // Real hours if imported
-      var realHr=window._realHrs&&window._realHrs[TECS.indexOf(t)]&&window._realHrs[TECS.indexOf(t)][dmy];
+      // Real hours if imported (persistido em escala.hr_reais)
+      var realHr=t.hr[di];
       if(realHr){
         var parts=realHr.split(':');
         if(parts.length===2) projMap[proj].horasReais+=parseInt(parts[0])+(parseInt(parts[1])/60);
@@ -555,7 +586,7 @@ function _util_showHoursDetail(proj){
       if(!tecData[t.n]) tecData[t.n]={days:0,prev:0,real:0};
       tecData[t.n].days++;
       tecData[t.n].prev+=11;
-      var realHr=window._realHrs&&window._realHrs[ti]&&window._realHrs[ti][dmy];
+      var realHr=t.hr[di];
       if(realHr){
         var parts=realHr.split(':');
         if(parts.length===2) tecData[t.n].real+=parseInt(parts[0])+(parseInt(parts[1])/60);
