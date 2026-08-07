@@ -29,6 +29,7 @@ async function confirmCell(){
     t.rowId[di]=row.id;
     buildTable();
     toast(val?'Status salvo: '+val:'Status removido','#a78bfa');
+    await maybeApplyAutoFolga(t, [di]);
   }catch(e){
     console.error('confirmCell', e);
     buildTable();

@@ -92,10 +92,56 @@ async function applyDragFill(ti, from, to, val){
     });
     buildTable();
     toast(msg, col);
+    await maybeApplyAutoFolga(t, days.map(function(d){return d.di;}));
   }catch(e){
     console.error('applyDragFill', e);
     buildTable();
     toast('Erro ao salvar intervalo: '+e.message, '#e85b5b');
+  }
+}
+
+/* ── Folga automática após DES. ──
+   Regra: N dias consecutivos embarcado/projeto antes do DES. geram N dias de folga NO TOTAL,
+   contando o próprio DES. como 1 desses dias — então marca folga_override no DES. e cria
+   F.EMB (folga_override=1) nos N-1 dias seguintes. Nunca sobrescreve um dia que já tem status;
+   para a sequência assim que encontrar um. Só passa a valer para DES. salvos daqui pra frente. */
+async function maybeApplyAutoFolga(t, savedIndices){
+  if(AppState.offline) return;
+  for(var i=0;i<savedIndices.length;i++){
+    var di=savedIndices[i];
+    var u=(t.d[di]||'').trim().toUpperCase();
+    if(u==='DES'||u==='DES.') await applyAutoFolgaForDes(t, di);
+  }
+}
+
+async function applyAutoFolgaForDes(t, desDi){
+  var n=0, k=desDi-1;
+  while(k>=0 && getCategory((t.d[k]||'').trim().toUpperCase())==='proj'){ n++; k--; }
+  if(n===0) return; // DES. sem bloco embarcado antes — não é o caso desta regra
+
+  var days=[];
+  if(!t.fo[desDi]) days.push({iso: toISO(DATES[desDi]), rowId: t.rowId[desDi], patch:{folga_override:1}, di:desDi});
+
+  for(var i=1;i<=n-1;i++){
+    var di2=desDi+i;
+    if(di2>=DATES.length || t.d[di2]) break; // fim do calendário ou dia já ocupado: para a sequência
+    days.push({iso: toISO(DATES[di2]), rowId: t.rowId[di2], patch:{status:'F.EMB', folga_override:1}, di:di2});
+  }
+  if(!days.length) return;
+
+  try{
+    var rows=await EscalaModel.saveRange(t.id, days);
+    rows.forEach(function(row, idx){
+      var di3=days[idx].di;
+      t.d[di3]=row.status||'';
+      t.fo[di3]=row.folga_override||0;
+      t.rowId[di3]=row.id;
+    });
+    buildTable();
+    toast('Folga automática aplicada após DES. ('+days.length+' dia'+(days.length!==1?'s':'')+')', '#1fc98e');
+  }catch(e){
+    console.error('applyAutoFolgaForDes', t.n, e);
+    toast('Erro ao aplicar folga automática: '+e.message, '#e85b5b');
   }
 }
 
