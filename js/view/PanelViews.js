@@ -255,7 +255,9 @@ function buildLine(){
   for(var i=s;i<=e;i+=step){
     var dp=DATES[i].split('/');labels.push(dp[0]+'/'+dp[1]);
     var st=TECS.map(function(t){return (t.d[i]||'').trim().toUpperCase();});
-    emb.push(+(st.filter(function(v){return v==='EMB'||v==='EMB.';}).length/N*100).toFixed(1));
+    // "Embarcados" = EMB propriamente dito + qualquer projeto/plataforma (P-52, MV-22, NOVELIS...),
+    // já que estar num projeto embarcado também é estar embarcado.
+    emb.push(+(st.filter(function(v){return getCategory(v)==='proj';}).length/N*100).toFixed(1));
     femb.push(+(st.filter(function(v){return v.indexOf('F.EMB')===0;}).length/N*100).toFixed(1));
     disp.push(+(st.filter(function(v){return v.indexOf('DISP')===0;}).length/N*100).toFixed(1));
     todayM.push(i===T_IDX);
@@ -511,18 +513,16 @@ function _util_renderHours(){
   var toISOv=toEl?toEl.value:'';
   var q=searchEl?searchEl.value.toLowerCase():'';
 
-  // Build from/to date boundaries
-  var fromDmy=fromISOv?_util_iso2dmy(fromISOv):'';
-  var toDmy=toISOv?_util_iso2dmy(toISOv):'';
-
   // Collect: project → {days, techs:Set, horasPrev, horasReais}
   var projMap={};
 
   TECS.forEach(function(t){
     DATES.forEach(function(dmy,di){
-      // Filter by date range
-      if(fromDmy&&dmy<fromDmy) return;
-      if(toDmy&&dmy>toDmy) return;
+      // Filter by date range — compara em ISO (YYYY-MM-DD), nunca a string DD/MM/YYYY
+      // (comparar "08/07/2026" com "07/08/2026" como texto dá resultado errado: dia "08" > dia "07")
+      var iso=toISO(dmy);
+      if(fromISOv&&iso<fromISOv) return;
+      if(toISOv&&iso>toISOv) return;
       var s=(t.d[di]||'').trim();
       if(!s) return;
       var u=s.toUpperCase();
@@ -568,19 +568,102 @@ function _util_renderHours(){
   var tb=document.getElementById('hrs-body');
   if(tb) tb.innerHTML=html||'<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text3)">Nenhum projeto encontrado no período</td></tr>';
   document.getElementById('hrs-detail').style.display='none';
+  _util_renderTecHours(); // mesmo período De/Até, mantém o card de busca por técnico em sincronia
+}
+
+/* ── HORAS POR TÉCNICO (busca por nome, mesmo período do card acima) ── */
+function _util_renderTecHours(){
+  var body=document.getElementById('tec-hrs-body');
+  var summary=document.getElementById('tec-hrs-summary');
+  if(!body) return;
+  var searchEl=document.getElementById('tec-hrs-search');
+  var q=searchEl?searchEl.value.trim().toLowerCase():'';
+
+  function empty(msg){
+    body.innerHTML='<tr><td colspan="4" style="text-align:center;padding:2rem;color:var(--text3)">'+msg+'</td></tr>';
+    if(summary) summary.style.display='none';
+  }
+
+  if(!q){ empty('Digite o nome de um técnico para ver o detalhamento'); return; }
+
+  var matches=TECS.filter(function(t){return t.n.toLowerCase().indexOf(q)>=0;});
+  if(matches.length===0){ empty('Nenhum técnico encontrado'); return; }
+  if(matches.length>1){
+    var names=matches.slice(0,8).map(function(t){return t.n;}).join(', ')+(matches.length>8?'…':'');
+    empty(matches.length+' técnicos encontrados — refine a busca<br><span style="font-size:11px">'+names+'</span>');
+    return;
+  }
+
+  var t=matches[0];
+  var fromEl=document.getElementById('hrs-from');
+  var toEl=document.getElementById('hrs-to');
+  var fromISOv=fromEl?fromEl.value:'';
+  var toISOv=toEl?toEl.value:'';
+
+  var projMap={};
+  var totalPrev=0, totalReal=0, totalPto=0;
+  DATES.forEach(function(dmy,di){
+    var iso=toISO(dmy);
+    if(fromISOv&&iso<fromISOv) return;
+    if(toISOv&&iso>toISOv) return;
+    var s=(t.d[di]||'').trim();
+    if(!s) return;
+    var u=s.toUpperCase();
+    var cat=getCategory(u);
+    if(cat==='pto') totalPto+=hrsForCat('pto');
+    if(cat!=='proj') return; // só entra na tabela se for embarque/projeto de fato
+    var proj=u.replace('P-MXL','PMXL').replace('P MXL','PMXL');
+    if(!projMap[proj]) projMap[proj]={proj:proj,days:0,prev:0,real:0};
+    projMap[proj].days++;
+    projMap[proj].prev+=11;
+    totalPrev+=11;
+    var realHr=t.hr[di];
+    if(realHr){
+      var parts=realHr.split(':');
+      if(parts.length===2){ var hh=parseInt(parts[0])+(parseInt(parts[1])/60); projMap[proj].real+=hh; totalReal+=hh; }
+    }
+  });
+
+  var rows=Object.values(projMap).sort(function(a,b){return b.days-a.days;});
+  var totalDays=rows.reduce(function(s,r){return s+r.days;},0);
+  var html=rows.map(function(r){
+    return '<tr>'
+      +'<td style="font-weight:500;color:var(--text)">'+r.proj+'</td>'
+      +'<td style="text-align:right;font-family:monospace;color:var(--text2)">'+r.days+'</td>'
+      +'<td style="text-align:right;font-family:monospace;color:var(--femb)">'+r.prev+'h</td>'
+      +'<td style="text-align:right;font-family:monospace;color:var(--emb)">'+(r.real>0?Math.round(r.real)+'h':'—')+'</td>'
+      +'</tr>';
+  }).join('');
+  if(rows.length){
+    html+='<tr style="font-weight:600;border-top:2px solid var(--border)">'
+      +'<td style="color:var(--text)">Total — '+t.n+'</td>'
+      +'<td style="text-align:right;font-family:monospace;color:var(--text2)">'+totalDays+'</td>'
+      +'<td style="text-align:right;font-family:monospace;color:var(--femb)">'+totalPrev+'h</td>'
+      +'<td style="text-align:right;font-family:monospace;color:var(--emb)">'+(totalReal>0?Math.round(totalReal)+'h':'—')+'</td>'
+      +'</tr>';
+  }
+  body.innerHTML=html||'<tr><td colspan="4" style="text-align:center;padding:2rem;color:var(--text3)">Nenhum dia embarcado/projeto no período para '+t.n+'</td></tr>';
+
+  if(summary){
+    summary.style.display='flex';
+    summary.innerHTML='<span>Horas Totais Prev.: <b style="color:var(--femb)">'+totalPrev+'h</b></span>'
+      +'<span>Horas Totais Reais: <b style="color:var(--emb)">'+(totalReal>0?Math.round(totalReal)+'h':'—')+'</b></span>'
+      +'<span>Horas 100% (folga/disponível): <b style="color:var(--accent)">'+totalPto+'h</b></span>';
+  }
 }
 
 function _util_showHoursDetail(proj){
   var fromEl=document.getElementById('hrs-from');
   var toEl=document.getElementById('hrs-to');
-  var fromDmy=fromEl&&fromEl.value?_util_iso2dmy(fromEl.value):'';
-  var toDmy=toEl&&toEl.value?_util_iso2dmy(toEl.value):'';
+  var fromISOv=fromEl?fromEl.value:'';
+  var toISOv=toEl?toEl.value:'';
 
   var tecData={};
   TECS.forEach(function(t,ti){
     DATES.forEach(function(dmy,di){
-      if(fromDmy&&dmy<fromDmy) return;
-      if(toDmy&&dmy>toDmy) return;
+      var iso=toISO(dmy);
+      if(fromISOv&&iso<fromISOv) return;
+      if(toISOv&&iso>toISOv) return;
       var s=(t.d[di]||'').trim().toUpperCase().replace('P-MXL','PMXL');
       if(s!==proj) return;
       if(!tecData[t.n]) tecData[t.n]={days:0,prev:0,real:0};
