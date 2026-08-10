@@ -31,8 +31,8 @@ function hrsForCat(cat){
   return 0;
 }
 function fmtHrs(h){
-  if(h===0) return '—';
-  return h+'h';
+  if(!h) return '—';
+  return Math.round(h)+'h';
 }
 var MONTH_NAMES_PT=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var _wsYear=null, _wsMonth=null; // mês selecionado no Resumo de horas (null = ainda não inicializado)
@@ -105,7 +105,15 @@ function buildWeeklySummary(year, month){
     TECS.forEach(function(t,ti){
       var u=(t.d[dw.di]||'').trim().toUpperCase();
       var cat=getCategory(u);
-      if(cat) data[ti][dw.wi][cat]+=hrsForCat(cat);
+      if(!cat) return;
+      // usa a hora real importada (escala.hr_reais) quando existir; senão cai na previsão
+      var hrs=hrsForCat(cat);
+      var realHr=t.hr[dw.di];
+      if(realHr){
+        var parts=realHr.split(':');
+        if(parts.length===2) hrs=parseInt(parts[0])+(parseInt(parts[1])/60);
+      }
+      data[ti][dw.wi][cat]+=hrs;
     });
   });
   // opções do seletor de mês: mês atual + 12 meses anteriores

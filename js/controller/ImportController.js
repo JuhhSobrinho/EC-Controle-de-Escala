@@ -181,6 +181,7 @@ async function applyImport(){
   if(impApplyBtn) impApplyBtn.disabled=false;
   closeImport();
   buildTable(); // re-render to show real hrs in leque
+  buildWeeklySummary(); // recalcula o Resumo de horas usando as horas reais recém-importadas
   var msg='✓ '+applied+' horas salvas no banco'+(skipped?' · '+skipped+' fora do calendário':'')+(errors?' · '+errors+' com erro':'');
   toast(msg, errors?'#e85b5b':'#1fc98e');
 }
