@@ -151,7 +151,10 @@ function buildWeeklySummary(year, month){
     +'<select class="form-input" style="width:auto;margin-left:auto;font-size:12px;padding:4px 8px;text-transform:none;letter-spacing:normal;font-weight:400" onchange="changeWeeklySummaryMonth(this.value)">'+monthOpts+'</select>'
     +'<button class="hdr-btn" style="text-transform:none;letter-spacing:normal;font-weight:400" onclick="exportWeeklySummary()" title="Baixar planilha .xlsx com os dados deste mês">'
     +'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>'
-    +'Exportar</button></div>';
+    +'Exportar</button>'
+    +'<button class="hdr-btn" style="text-transform:none;letter-spacing:normal;font-weight:400" onclick="exportWeeklySummaryPDF()" title="Gerar PDF do resumo de horas deste mês, com utilização">'
+    +'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>'
+    +'PDF</button></div>';
   h+='<div class="weekly-outer"><table class="wtbl">';
   // header row 1: name + week labels (spanning 4 cols each) + total
   h+='<thead><tr>';
@@ -256,6 +259,83 @@ function exportWeeklySummary(){
   var fname='resumo-horas-'+MONTH_NAMES_PT[month].toLowerCase()+'-'+year+'.xlsx';
   XLSX.writeFile(wb, fname);
   toast('Planilha gerada: '+fname, '#1fc98e');
+}
+
+/* Utilização de um bloco de horas por categoria: Horas de Projeto / Horas Totais do período
+   (mesmo conceito do "Utilization %" do relatório LATAM Weekly Man Hours Detail). */
+function _weeklyUtilization(catsObj, cats){
+  var total=cats.reduce(function(s,c){return s+catsObj[c];},0);
+  if(total<=0) return null;
+  return catsObj.proj/total;
+}
+function _fmtPct(u){ return u===null ? '—' : Math.round(u*100)+'%'; }
+
+/* Gera um PDF (via impressão do navegador) do Resumo de horas do mês exibido,
+   no formato inspirado no relatório "LATAM Weekly Man Hours Detail": por técnico,
+   por semana, com uma coluna de Utilização (Horas de Projeto / Horas Totais). */
+function exportWeeklySummaryPDF(){
+  if(_wsYear===null){ var d=defaultWeeklySummaryMonth(); _wsYear=d.year; _wsMonth=d.month; }
+  var year=_wsYear, month=_wsMonth;
+  var summary=computeWeeklySummary(year, month);
+  var weeks=summary.weeks, cats=summary.cats, catLabels=summary.catLabels;
+  var monthLabel=MONTH_NAMES_PT[month]+' '+year;
+
+  function catHeaderGroup(){
+    var s='';
+    cats.forEach(function(c){ s+='<th>'+catLabels[c]+'</th>'; });
+    s+='<th>Total</th><th>Utilização</th>';
+    return s;
+  }
+  var head1='<th rowspan="2">Técnico</th>';
+  weeks.forEach(function(w){ head1+='<th colspan="'+(cats.length+2)+'">'+w.label+'</th>'; });
+  head1+='<th colspan="'+(cats.length+2)+'">Total do mês</th>';
+  var head2='';
+  weeks.forEach(function(){ head2+=catHeaderGroup(); });
+  head2+=catHeaderGroup();
+
+  function rowCells(catsObj){
+    var s='';
+    cats.forEach(function(c){ s+='<td>'+fmtHrs(catsObj[c])+'</td>'; });
+    var total=cats.reduce(function(sum,c){return sum+catsObj[c];},0);
+    s+='<td>'+fmtHrs(total)+'</td><td>'+_fmtPct(_weeklyUtilization(catsObj,cats))+'</td>';
+    return s;
+  }
+
+  var bodyRows='';
+  TECS.forEach(function(t,ti){
+    var row='<tr><td class="name">'+t.n+'</td>';
+    weeks.forEach(function(w,wi){ row+=rowCells(summary.data[ti][wi]); });
+    row+=rowCells(summary.rowTotals[ti]);
+    row+='</tr>';
+    bodyRows+=row;
+  });
+  var totalRow='<tr class="totals"><td>Total geral</td>';
+  weeks.forEach(function(w,wi){ totalRow+=rowCells(summary.colTotals[wi]); });
+  totalRow+=rowCells(summary.grandTotals);
+  totalRow+='</tr>';
+
+  var html='<!doctype html><html><head><meta charset="utf-8"><title>Resumo de Horas - '+monthLabel+'</title>'
+    +'<style>'
+    +'body{font-family:Arial,Helvetica,sans-serif;margin:20px;color:#111}'
+    +'h1{font-size:17px;margin-bottom:4px}'
+    +'.sub{font-size:11px;color:#555;margin-bottom:14px}'
+    +'table{border-collapse:collapse;width:100%;font-size:9px}'
+    +'th,td{border:1px solid #999;padding:3px 5px;text-align:right;white-space:nowrap}'
+    +'th{background:#eee;text-align:center}'
+    +'td.name{text-align:left;font-weight:600}'
+    +'tr.totals td{font-weight:700;background:#f5f5f5}'
+    +'@media print{@page{size:landscape;margin:10mm}}'
+    +'</style></head><body>'
+    +'<h1>Resumo de Horas — '+monthLabel+'</h1>'
+    +'<div class="sub">Gerado em '+new Date().toLocaleDateString('pt-BR')+' · '+TECS.length+' técnicos · Utilização = Horas de Projeto / Horas Totais do período (baseado no LATAM Weekly Man Hours Detail)</div>'
+    +'<table><thead><tr>'+head1+'</tr><tr>'+head2+'</tr></thead><tbody>'+bodyRows+totalRow+'</tbody></table>'
+    +'</body></html>';
+
+  var win=window.open('', '_blank');
+  if(!win){ toast('Habilite pop-ups para gerar o PDF', '#e85b5b'); return; }
+  win.document.write(html);
+  win.document.close();
+  setTimeout(function(){ try{ win.focus(); win.print(); }catch(e){} }, 350);
 }
 
 /* ── DASHBOARD ── */
