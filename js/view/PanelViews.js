@@ -32,7 +32,9 @@ function hrsForCat(cat){
 }
 function fmtHrs(h){
   if(!h) return '—';
-  return Math.round(h)+'h';
+  var totalMin=Math.round(h*60);
+  var hh=Math.floor(totalMin/60), mm=totalMin%60;
+  return hh+'h'+(mm?String(mm).padStart(2,'0')+'m':'');
 }
 var MONTH_NAMES_PT=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var _wsYear=null, _wsMonth=null; // mês selecionado no Resumo de horas (null = ainda não inicializado)
@@ -51,24 +53,20 @@ function changeWeeklySummaryMonth(value){
   buildWeeklySummary(parseInt(p[0]),parseInt(p[1]));
 }
 
-function buildWeeklySummary(year, month){
-  if(year===undefined || month===undefined){
-    if(_wsYear===null){ var d=defaultWeeklySummaryMonth(); _wsYear=d.year; _wsMonth=d.month; }
-    year=_wsYear; month=_wsMonth;
-  } else {
-    _wsYear=year; _wsMonth=month;
-  }
-  var JUN_YEAR=year, JUN_MONTH=month; // 0-indexed
-  var junStart = new Date(JUN_YEAR,JUN_MONTH,1);
-  var junEnd   = new Date(JUN_YEAR,JUN_MONTH+1,0); // último dia do mês
+/* Calcula os dados do Resumo de horas para um mês (usado tanto pra desenhar a tabela
+   quanto pra exportar a planilha) — semanas do mês, horas por categoria/semana/técnico,
+   e os totais por semana e gerais. */
+function computeWeeklySummary(year, month){
+  var monStart = new Date(year,month,1);
+  var monEnd   = new Date(year,month+1,0); // último dia do mês
   // build week list: find Monday of first week
-  var cur = new Date(junStart);
+  var cur = new Date(monStart);
   cur.setDate(cur.getDate() - ((cur.getDay()+6)%7)); // back to Monday
   var weeks=[];
-  while(cur <= junEnd){
+  while(cur <= monEnd){
     var wEnd = new Date(cur); wEnd.setDate(wEnd.getDate()+6);
-    var ws = new Date(Math.max(cur.getTime(), junStart.getTime()));
-    var we = new Date(Math.min(wEnd.getTime(), junEnd.getTime()));
+    var ws = new Date(Math.max(cur.getTime(), monStart.getTime()));
+    var we = new Date(Math.min(wEnd.getTime(), monEnd.getTime()));
     function fmtD(d){ return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'); }
     weeks.push({label: fmtD(ws)+' – '+fmtD(we), fullStart: new Date(cur), fullEnd: new Date(wEnd)});
     cur.setDate(cur.getDate()+7);
@@ -81,18 +79,14 @@ function buildWeeklySummary(year, month){
     }
     return -1;
   }
-  // precompute: for each date index → week index (only June dates)
+  // precompute: for each date index → week index (only dates within the month)
   var dateWeek=[];
-  var junDates=[];
   for(var di=0;di<DATES.length;di++){
     var p=DATES[di].split('/');
-    if(+p[1]-1===JUN_MONTH && +p[2]===JUN_YEAR){
-      var wi=dateToWeekIdx(DATES[di]);
-      dateWeek.push({di:di,wi:wi});
-      junDates.push(di);
+    if(+p[1]-1===month && +p[2]===year){
+      dateWeek.push({di:di,wi:dateToWeekIdx(DATES[di])});
     }
   }
-  // for each tec, compute hours per category per week
   var cats=['proj','mob','trein','pto'];
   var catLabels={'proj':'Project-Hrs','mob':'On-Call/Mob','trein':'Training','pto':'PTO'};
   var catCls={'proj':'w-proj','mob':'w-mob','trein':'w-trein','pto':'w-pto'};
@@ -116,6 +110,32 @@ function buildWeeklySummary(year, month){
       data[ti][dw.wi][cat]+=hrs;
     });
   });
+  var colTotals=weeks.map(function(){ return {proj:0,mob:0,trein:0,pto:0}; });
+  var grandTotals={proj:0,mob:0,trein:0,pto:0};
+  var rowTotals=TECS.map(function(){ return {proj:0,mob:0,trein:0,pto:0}; });
+  TECS.forEach(function(t,ti){
+    weeks.forEach(function(w,wi){
+      cats.forEach(function(cat){
+        var hrs=data[ti][wi][cat];
+        colTotals[wi][cat]+=hrs;
+        rowTotals[ti][cat]+=hrs;
+        grandTotals[cat]+=hrs;
+      });
+    });
+  });
+  return {weeks:weeks, cats:cats, catLabels:catLabels, catCls:catCls, data:data, colTotals:colTotals, grandTotals:grandTotals, rowTotals:rowTotals};
+}
+
+function buildWeeklySummary(year, month){
+  if(year===undefined || month===undefined){
+    if(_wsYear===null){ var d=defaultWeeklySummaryMonth(); _wsYear=d.year; _wsMonth=d.month; }
+    year=_wsYear; month=_wsMonth;
+  } else {
+    _wsYear=year; _wsMonth=month;
+  }
+  var summary=computeWeeklySummary(year, month);
+  var weeks=summary.weeks, cats=summary.cats, catLabels=summary.catLabels, catCls=summary.catCls;
+  var data=summary.data, colTotals=summary.colTotals, grandTotals=summary.grandTotals;
   // opções do seletor de mês: mês atual + 12 meses anteriores
   var now=new Date(), monthOpts='';
   for(var mi=0; mi<13; mi++){
@@ -128,7 +148,10 @@ function buildWeeklySummary(year, month){
   var COLS=cats.length; // 4 categories per week
   var h='<div class="weekly-wrap">';
   h+='<div class="weekly-title"><span>Resumo de horas — '+MONTH_NAMES_PT[month]+' '+year+'</span>'
-    +'<select class="form-input" style="width:auto;margin-left:auto;font-size:12px;padding:4px 8px;text-transform:none;letter-spacing:normal;font-weight:400" onchange="changeWeeklySummaryMonth(this.value)">'+monthOpts+'</select></div>';
+    +'<select class="form-input" style="width:auto;margin-left:auto;font-size:12px;padding:4px 8px;text-transform:none;letter-spacing:normal;font-weight:400" onchange="changeWeeklySummaryMonth(this.value)">'+monthOpts+'</select>'
+    +'<button class="hdr-btn" style="text-transform:none;letter-spacing:normal;font-weight:400" onclick="exportWeeklySummary()" title="Baixar planilha .xlsx com os dados deste mês">'
+    +'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>'
+    +'Exportar</button></div>';
   h+='<div class="weekly-outer"><table class="wtbl">';
   // header row 1: name + week labels (spanning 4 cols each) + total
   h+='<thead><tr>';
@@ -150,27 +173,20 @@ function buildWeeklySummary(year, month){
   h+='</tr></thead>';
   // body
   h+='<tbody>';
-  // column totals accumulators
-  var colTotals=weeks.map(function(){ return {proj:0,mob:0,trein:0,pto:0}; });
-  var grandTotals={proj:0,mob:0,trein:0,pto:0};
   TECS.forEach(function(t,ti){
     h+='<tr>';
     h+='<td class="wfx">'+t.n+'</td>';
-    var rowGrand={proj:0,mob:0,trein:0,pto:0};
     weeks.forEach(function(w,wi){
       cats.forEach(function(cat,cati){
         var hrs=data[ti][wi][cat];
         var sep=(cati===0)?'week-sep':'';
         var cls=catCls[cat]+' '+(hrs===0?'w-zero':'')+' '+sep;
         h+='<td class="'+cls.trim()+'">'+fmtHrs(hrs)+'</td>';
-        colTotals[wi][cat]+=hrs;
-        rowGrand[cat]+=hrs;
-        grandTotals[cat]+=hrs;
       });
     });
     // row totals
     cats.forEach(function(cat,cati){
-      var hrs=rowGrand[cat];
+      var hrs=summary.rowTotals[ti][cat];
       var sep=(cati===0)?'week-sep':'';
       var cls=catCls[cat]+' w-total '+sep+(hrs===0?' w-zero':'');
       h+='<td class="'+cls.trim()+'">'+fmtHrs(hrs)+'</td>';
@@ -195,6 +211,51 @@ function buildWeeklySummary(year, month){
   h+='</tr>';
   h+='</tbody></table></div></div>';
   document.getElementById('weekly-summary').innerHTML=h;
+}
+
+/* Gera uma planilha .xlsx com os mesmos dados do mês exibido no Resumo de horas. */
+function exportWeeklySummary(){
+  if(_wsYear===null){ var d=defaultWeeklySummaryMonth(); _wsYear=d.year; _wsMonth=d.month; }
+  var year=_wsYear, month=_wsMonth;
+  var summary=computeWeeklySummary(year, month);
+  var weeks=summary.weeks, cats=summary.cats, catLabels=summary.catLabels;
+
+  var row1=['Técnico'], row2=[''];
+  weeks.forEach(function(w){
+    row1.push(w.label,'','','');
+    cats.forEach(function(c){ row2.push(catLabels[c]); });
+  });
+  row1.push('Total '+MONTH_NAMES_PT[month].slice(0,3)+'.','','','');
+  cats.forEach(function(c){ row2.push(catLabels[c]); });
+
+  var rows=[row1,row2];
+  TECS.forEach(function(t,ti){
+    var row=[t.n];
+    weeks.forEach(function(w,wi){
+      cats.forEach(function(c){ row.push(fmtHrs(summary.data[ti][wi][c])); });
+    });
+    cats.forEach(function(c){ row.push(fmtHrs(summary.rowTotals[ti][c])); });
+    rows.push(row);
+  });
+  var totalsRow=['Total'];
+  weeks.forEach(function(w,wi){
+    cats.forEach(function(c){ totalsRow.push(fmtHrs(summary.colTotals[wi][c])); });
+  });
+  cats.forEach(function(c){ totalsRow.push(fmtHrs(summary.grandTotals[c])); });
+  rows.push(totalsRow);
+
+  var wb=XLSX.utils.book_new();
+  var ws=XLSX.utils.aoa_to_sheet(rows);
+  // mescla os cabeçalhos de semana/total (4 colunas cada) na primeira linha
+  var merges=[], col=1;
+  weeks.forEach(function(){ merges.push({s:{r:0,c:col},e:{r:0,c:col+3}}); col+=4; });
+  merges.push({s:{r:0,c:col},e:{r:0,c:col+3}});
+  ws['!merges']=merges;
+  ws['!cols']=[{wch:28}].concat(new Array(weeks.length*4+4).fill({wch:12}));
+  XLSX.utils.book_append_sheet(wb, ws, MONTH_NAMES_PT[month]+' '+year);
+  var fname='resumo-horas-'+MONTH_NAMES_PT[month].toLowerCase()+'-'+year+'.xlsx';
+  XLSX.writeFile(wb, fname);
+  toast('Planilha gerada: '+fname, '#1fc98e');
 }
 
 /* ── DASHBOARD ── */
