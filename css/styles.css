@@ -391,12 +391,22 @@ select.form-input{cursor:pointer;color-scheme:dark}
   .modal-head{padding:16px 16px 12px}
   .modal-body{padding:16px}
   .modal-foot{padding:12px 16px;flex-wrap:wrap}
-  th.th-date,tbody td.tc,.hrs-cell{width:60px;min-width:60px}
-  .d-day{font-size:10px}
-  .d-dow{font-size:9px}
+  /* tabela principal — coluna de nome fica bem mais estreita pra sobrar espaço
+     pra vários dias de uma vez (senão só cabe nome + 1 dia na tela) */
+  #tbl thead th.fx{min-width:96px !important;width:96px}
+  #tbl tbody td.fx{max-width:96px}
+  .detail-fn-text{max-width:80px}
+  th.th-date,tbody td.tc,.hrs-cell{width:46px;min-width:46px}
+  .hrs-cell{min-height:52px}
+  tbody td.tc,td.day-cell{padding:4px 2px;overflow:hidden;text-overflow:ellipsis;font-size:10px}
+  .d-day{font-size:9px}
+  .d-dow{font-size:8px}
+  .today-pill{font-size:7px;padding:1px 3px}
   .hbar-name{width:90px;font-size:10px}
   .prof-header-bar{flex-direction:column;align-items:stretch}
   .prof-header-bar .search-box{width:100%;min-width:0}
   .util-date-nav input[type=date]{flex:1;min-width:120px}
+  /* tabela de profissionais — mesma ideia: nome mais estreito, resto rola horizontalmente */
+  .wtbl thead th.wfx,.wtbl tbody td.wfx{min-width:110px !important;max-width:110px}
 }
 
