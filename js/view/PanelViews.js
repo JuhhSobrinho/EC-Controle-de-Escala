@@ -215,51 +215,6 @@ function buildWeeklySummary(year, month){
   document.getElementById('weekly-summary').innerHTML=h;
 }
 
-/* Gera uma planilha .xlsx com os mesmos dados do mês exibido no Resumo de horas. */
-function exportWeeklySummary(){
-  if(_wsYear===null){ var d=defaultWeeklySummaryMonth(); _wsYear=d.year; _wsMonth=d.month; }
-  var year=_wsYear, month=_wsMonth;
-  var summary=computeWeeklySummary(year, month);
-  var weeks=summary.weeks, cats=summary.cats, catLabels=summary.catLabels;
-
-  var row1=['Técnico'], row2=[''];
-  weeks.forEach(function(w){
-    row1.push(w.label,'','','');
-    cats.forEach(function(c){ row2.push(catLabels[c]); });
-  });
-  row1.push('Total '+MONTH_NAMES_PT[month].slice(0,3)+'.','','','');
-  cats.forEach(function(c){ row2.push(catLabels[c]); });
-
-  var rows=[row1,row2];
-  TECS.forEach(function(t,ti){
-    var row=[t.n];
-    weeks.forEach(function(w,wi){
-      cats.forEach(function(c){ row.push(fmtHrs(summary.data[ti][wi][c])); });
-    });
-    cats.forEach(function(c){ row.push(fmtHrs(summary.rowTotals[ti][c])); });
-    rows.push(row);
-  });
-  var totalsRow=['Total'];
-  weeks.forEach(function(w,wi){
-    cats.forEach(function(c){ totalsRow.push(fmtHrs(summary.colTotals[wi][c])); });
-  });
-  cats.forEach(function(c){ totalsRow.push(fmtHrs(summary.grandTotals[c])); });
-  rows.push(totalsRow);
-
-  var wb=XLSX.utils.book_new();
-  var ws=XLSX.utils.aoa_to_sheet(rows);
-  // mescla os cabeçalhos de semana/total (4 colunas cada) na primeira linha
-  var merges=[], col=1;
-  weeks.forEach(function(){ merges.push({s:{r:0,c:col},e:{r:0,c:col+3}}); col+=4; });
-  merges.push({s:{r:0,c:col},e:{r:0,c:col+3}});
-  ws['!merges']=merges;
-  ws['!cols']=[{wch:28}].concat(new Array(weeks.length*4+4).fill({wch:12}));
-  XLSX.utils.book_append_sheet(wb, ws, MONTH_NAMES_PT[month]+' '+year);
-  var fname='resumo-horas-'+MONTH_NAMES_PT[month].toLowerCase()+'-'+year+'.xlsx';
-  XLSX.writeFile(wb, fname);
-  toast('Planilha gerada: '+fname, '#1fc98e');
-}
-
 /* Utilização de um bloco de horas por categoria: Horas de Projeto / Horas Totais do período
    (mesmo conceito do "Utilization %" do relatório LATAM Weekly Man Hours Detail). */
 function _weeklyUtilization(catsObj, cats){
@@ -268,6 +223,71 @@ function _weeklyUtilization(catsObj, cats){
   return catsObj.proj/total;
 }
 function _fmtPct(u){ return u===null ? '—' : Math.round(u*100)+'%'; }
+
+/* Gera uma planilha .xlsx com a mesma estrutura do PDF (por técnico, por semana,
+   com Total + Utilização em cada grupo) — pra planilha e PDF baterem número a número. */
+function exportWeeklySummary(){
+  if(_wsYear===null){ var d=defaultWeeklySummaryMonth(); _wsYear=d.year; _wsMonth=d.month; }
+  var year=_wsYear, month=_wsMonth;
+  var summary=computeWeeklySummary(year, month);
+  var weeks=summary.weeks, cats=summary.cats, catLabels=summary.catLabels;
+  var monthLabel=MONTH_NAMES_PT[month]+' '+year;
+  var groupW=cats.length+2; // categorias + Total + Utilização
+  var totalCols=1+weeks.length*groupW+groupW;
+
+  function groupHeaderRow(){
+    var arr=[]; cats.forEach(function(c){ arr.push(catLabels[c]); });
+    arr.push('Total','Utilização'); return arr;
+  }
+  function groupDataRow(catsObj){
+    var arr=[]; cats.forEach(function(c){ arr.push(fmtHrs(catsObj[c])); });
+    var total=cats.reduce(function(s,c){return s+catsObj[c];},0);
+    arr.push(fmtHrs(total), _fmtPct(_weeklyUtilization(catsObj,cats)));
+    return arr;
+  }
+
+  var titleRow=['Resumo de Horas — '+monthLabel];
+  var subRow=['Gerado em '+new Date().toLocaleDateString('pt-BR')+' · '+TECS.length+' técnicos · Utilização = Horas de Projeto / Horas Totais do período'];
+  var head1=['Técnico'];
+  weeks.forEach(function(w){ head1.push(w.label); for(var i=1;i<groupW;i++)head1.push(''); });
+  head1.push('Total do mês'); for(var i=1;i<groupW;i++)head1.push('');
+  var head2=[''];
+  weeks.forEach(function(){ head2=head2.concat(groupHeaderRow()); });
+  head2=head2.concat(groupHeaderRow());
+
+  var rows=[titleRow,subRow,head1,head2];
+  TECS.forEach(function(t,ti){
+    var row=[t.n];
+    weeks.forEach(function(w,wi){ row=row.concat(groupDataRow(summary.data[ti][wi])); });
+    row=row.concat(groupDataRow(summary.rowTotals[ti]));
+    rows.push(row);
+  });
+  var totalsRow=['Total geral'];
+  weeks.forEach(function(w,wi){ totalsRow=totalsRow.concat(groupDataRow(summary.colTotals[wi])); });
+  totalsRow=totalsRow.concat(groupDataRow(summary.grandTotals));
+  rows.push(totalsRow);
+
+  var wb=XLSX.utils.book_new();
+  var ws=XLSX.utils.aoa_to_sheet(rows);
+
+  // mescla título/subtítulo (linha inteira), cabeçalho "Técnico" (2 linhas) e cada
+  // grupo de semana/total do mês (categorias + Total + Utilização)
+  var merges=[
+    {s:{r:0,c:0},e:{r:0,c:totalCols-1}},
+    {s:{r:1,c:0},e:{r:1,c:totalCols-1}},
+    {s:{r:2,c:0},e:{r:3,c:0}}
+  ];
+  var col=1;
+  weeks.forEach(function(){ merges.push({s:{r:2,c:col},e:{r:2,c:col+groupW-1}}); col+=groupW; });
+  merges.push({s:{r:2,c:col},e:{r:2,c:col+groupW-1}});
+  ws['!merges']=merges;
+  ws['!cols']=[{wch:28}].concat(new Array(totalCols-1).fill({wch:12}));
+
+  XLSX.utils.book_append_sheet(wb, ws, monthLabel.slice(0,31));
+  var fname='resumo-horas-'+MONTH_NAMES_PT[month].toLowerCase()+'-'+year+'.xlsx';
+  XLSX.writeFile(wb, fname);
+  toast('Planilha gerada: '+fname, '#1fc98e');
+}
 
 /* Gera um PDF (via impressão do navegador) do Resumo de horas do mês exibido,
    no formato inspirado no relatório "LATAM Weekly Man Hours Detail": por técnico,
