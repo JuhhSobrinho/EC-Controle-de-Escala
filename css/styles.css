@@ -283,6 +283,8 @@ select.form-input{cursor:pointer;color-scheme:dark}
 /* ═══════════════════════════════════════════════════
    UTILIZAÇÃO — dark/light theme styles
    ═══════════════════════════════════════════════════ */
+.kpi-row{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin:16px 0}
+.util-charts-row{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px}
 .util-date-nav{display:flex;align-items:center;gap:8px;padding:4px 0 0;flex-wrap:wrap}
 .util-date-nav button{background:var(--bg3);border:1px solid var(--border);color:var(--text2);padding:6px 13px;border-radius:7px;cursor:pointer;font-size:12px;font-family:inherit;transition:all .15s}
 .util-date-nav button:hover{border-color:var(--accent);color:var(--accent)}
@@ -353,4 +355,48 @@ select.form-input{cursor:pointer;color-scheme:dark}
 .prof-badge.irata{background:rgba(168,139,250,.12);color:var(--proj)}
 .prof-edit-btn{background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;padding:2px 6px;border-radius:4px;transition:all .15s}
 .prof-edit-btn:hover{background:var(--bg3);color:var(--accent)}
+
+/* ═══════════════════════════════════════════════════
+   RESPONSIVO — tablet e mobile
+   ═══════════════════════════════════════════════════ */
+@media(max-width:900px){
+  .kpi-row{grid-template-columns:repeat(3,1fr)}
+  .util-charts-row{grid-template-columns:1fr}
+}
+@media(max-width:640px){
+  html{font-size:13px}
+  .header{position:static;height:auto;flex-wrap:wrap;padding:10px 12px;gap:8px}
+  .header-left{width:100%}
+  .header-right{width:100%;flex-wrap:wrap;gap:6px}
+  .header-badge{margin-left:auto}
+  .hdr-btn{font-size:11px;padding:5px 9px;gap:4px}
+  .hdr-btn svg{flex-shrink:0}
+  .tabs-bar{position:sticky;top:0;padding:0 10px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .tabs-bar::-webkit-scrollbar{display:none}
+  .tab-btn{padding:10px 14px;font-size:12px;flex-shrink:0}
+  .content{padding:.75rem}
+  .legend-row{gap:4px}
+  .leg-item{font-size:10px;padding:2px 7px}
+  .controls-bar{gap:6px}
+  .search-box{width:100%}
+  .nav-group{width:100%;justify-content:space-between;margin-left:0}
+  .kpi-row{grid-template-columns:repeat(2,1fr);gap:8px}
+  #utilizacao .kpi-card{padding:12px}
+  #utilizacao .kpi-value{font-size:22px}
+  .metric-row{grid-template-columns:repeat(2,1fr)}
+  .chart-card{padding:1rem 1.1rem}
+  .dash-filter{padding:10px 12px;gap:6px}
+  .form-row{grid-template-columns:1fr}
+  .status-grid{grid-template-columns:repeat(2,1fr)}
+  .modal-head{padding:16px 16px 12px}
+  .modal-body{padding:16px}
+  .modal-foot{padding:12px 16px;flex-wrap:wrap}
+  th.th-date,tbody td.tc,.hrs-cell{width:60px;min-width:60px}
+  .d-day{font-size:10px}
+  .d-dow{font-size:9px}
+  .hbar-name{width:90px;font-size:10px}
+  .prof-header-bar{flex-direction:column;align-items:stretch}
+  .prof-header-bar .search-box{width:100%;min-width:0}
+  .util-date-nav input[type=date]{flex:1;min-width:120px}
+}
 
