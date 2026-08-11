@@ -33,9 +33,30 @@ var expandedRows = {};
 var STATUSES=[
   {v:'EMB',cls:'be',label:'EMB'},{v:'F.EMB',cls:'bfe',label:'F.EMB'},
   {v:'DES',cls:'bde',label:'DES'},{v:'DISP.',cls:'bdi',label:'DISP.'},
-  {v:'MOB.',cls:'bmo',label:'MOB.'},{v:'BASE',cls:'bba',label:'BASE'},
-  {v:'AFASTADO',cls:'baf',label:'AFAS'}
+  {v:'MOB.',cls:'bmo',label:'MOB.'},{v:'TREINAM.',cls:'btr',label:'TREINAM.'},
+  {v:'BASE',cls:'bba',label:'BASE'},{v:'AFASTADO',cls:'baf',label:'AFAS'}
 ];
+
+/* palavras-chave que classificam um status como "treinamento" — usadas tanto pra
+   colorir a célula (badgeCls) quanto pra contabilizar as horas no Resumo (getCategory
+   em PanelViews.js). Editável pelo usuário no modal de Tipos de Treinamento;
+   persiste só neste navegador (localStorage), não sincroniza com o banco. */
+var TRAINING_KEYWORDS = loadTrainingKeywords();
+function loadTrainingKeywords(){
+  try{
+    var saved = localStorage.getItem('ec_training_kw');
+    if(saved){ var arr = JSON.parse(saved); if(Array.isArray(arr)) return arr; }
+  }catch(e){}
+  return ['TREINAM','CURSO','IRATA','ASO','HTS','NTS','JOTUN','RESG','IBIRITE','IBIRITÉ','T-HUET','THUET'];
+}
+function saveTrainingKeywords(){
+  localStorage.setItem('ec_training_kw', JSON.stringify(TRAINING_KEYWORDS));
+}
+function isTrainingStatus(u){
+  if(!u) return false;
+  var s=u.trim().toUpperCase();
+  return TRAINING_KEYWORDS.some(function(k){return s.indexOf(k.trim().toUpperCase())===0;});
+}
 
 function dow(dmy){var p=dmy.split('/');return DOW_MAP[new Date(+p[2],+p[1]-1,+p[0]).getDay()];}
 function isWeekend(dmy){var p=dmy.split('/');var d=new Date(+p[2],+p[1]-1,+p[0]).getDay();return d===0||d===6;}
@@ -53,6 +74,7 @@ function badgeCls(v){
   if(u.indexOf('MOB')===0)return 'bmo';
   if(u.indexOf('AFAS')===0)return 'baf';
   if(u==='BASE'||u==='HOTEL'||u==='RECAP')return 'bba';
+  if(isTrainingStatus(u))return 'btr';
   if(u)return 'bpr';
   return '';
 }

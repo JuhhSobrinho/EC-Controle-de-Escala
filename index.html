@@ -43,6 +43,10 @@
       Importar Horas
     </button>
     <input type="file" id="importHrsInput" accept=".xlsx" style="display:none" onchange="loadImportFile(this)">
+    <button class="hdr-btn" onclick="openTrainModal()" title="Gerenciar quais palavras contam como treinamento/curso no Resumo de Horas">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5-10-5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg>
+      Treinamentos
+    </button>
     <div class="header-badge" id="hDate">19 de jun. de 2026</div>
   </div>
 </header>
@@ -74,6 +78,7 @@
     <span class="leg-item"><span class="leg-dot" style="background:var(--st-mob)"></span>Mobilização</span>
     <span class="leg-item"><span class="leg-dot" style="background:var(--af)"></span>Afastado</span>
     <span class="leg-item"><span class="leg-dot" style="background:var(--base)"></span>Base / Hotel</span>
+    <span class="leg-item"><span class="leg-dot" style="background:var(--st-trein)"></span>Treinamento / Curso</span>
     <span class="leg-item">
       <span style="display:inline-flex;align-items:center;gap:4px">
         <span class="b bfe" style="box-shadow:0 0 0 2px var(--st-femb);font-size:9px;padding:1px 5px">F.EMB</span>
@@ -196,6 +201,29 @@
       </div>
     </div>
     <div class="modal-foot"><button class="btn btn-ghost" onclick="closeBlock()">Cancelar</button><button class="btn btn-accent" onclick="confirmBlock()">Aplicar</button></div>
+  </div>
+</div>
+<div class="overlay" id="trainOverlay" onclick="if(event.target===this)closeTrainModal()">
+  <div class="modal" style="width:460px">
+    <div class="modal-head">
+      <div><div class="modal-title">Tipos de Treinamento</div><div class="modal-sub">Palavras usadas para reconhecer dias de treinamento/curso na tabela e no Resumo de Horas</div></div>
+      <button class="modal-close" onclick="closeTrainModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <div class="form-label">Cadastrados</div>
+        <div class="train-list" id="trainList"></div>
+      </div>
+      <div class="form-group">
+        <div class="form-label">Adicionar novo tipo</div>
+        <div class="train-add-row">
+          <input class="form-input" type="text" id="trainInput" placeholder="ex: PT, NR-35, HUET..." maxlength="20" onkeydown="if(event.key==='Enter'){event.preventDefault();addTrainingKeyword();}">
+          <button class="btn btn-accent" onclick="addTrainingKeyword()">Adicionar</button>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-top:8px">Qualquer status que <b>comece</b> com uma dessas palavras entra como treinamento (ex: "CURSO" reconhece "CURSO NR-35"). Salvo só neste navegador.</div>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-ghost" onclick="closeTrainModal()">Fechar</button></div>
   </div>
 </div>
 
@@ -436,6 +464,7 @@
 <script src="js/controller/DragFillController.js"></script>
 <script src="js/controller/FolgaToggleController.js"></script>
 <script src="js/controller/BlockController.js"></script>
+<script src="js/controller/TrainingController.js"></script>
 <script src="js/controller/TecnicoController.js"></script>
 <script src="js/controller/ImportController.js"></script>
 <script src="js/controller/ReportController.js"></script>

@@ -19,6 +19,7 @@
   --st-femb:#1fc98e;--st-femb-bg:rgba(31,201,142,.13);
   --st-mob:#4a9eff;--st-mob-bg:rgba(74,158,255,.13);
   --st-des:#7dd3fc;--st-des-bg:rgba(125,211,252,.16);
+  --st-trein:#2dd4bf;--st-trein-bg:rgba(45,212,191,.15);
 }
 :root.light{
   --bg:#dde1e8;--bg2:#f5f7fa;--bg3:#e7eaf0;
@@ -37,6 +38,7 @@
   --st-femb:#0ea874;--st-femb-bg:rgba(14,168,116,.1);
   --st-mob:#2563eb;--st-mob-bg:rgba(37,99,235,.1);
   --st-des:#0ea5e9;--st-des-bg:rgba(14,165,233,.12);
+  --st-trein:#0d9488;--st-trein-bg:rgba(13,148,136,.1);
 }
 /* modo claro: um pouco mais de corpo/profundidade para não ficar tão chapado */
 :root.light .header{box-shadow:0 1px 3px rgba(0,0,0,.07)}
@@ -145,6 +147,7 @@ td.day-cell.bdi{background:var(--disp);color:#0b0f14;font-weight:700}
 td.day-cell.bmo{background:var(--st-mob);color:#0b0f14;font-weight:700}
 td.day-cell.baf{background:var(--af);color:#0b0f14;font-weight:700}
 td.day-cell.bba{background:var(--base);color:#fff;font-weight:700}
+td.day-cell.btr{background:var(--st-trein);color:#0b0f14;font-weight:700}
 :root.light td.day-cell.be,:root.light td.day-cell.bfe,:root.light td.day-cell.bpr,
 :root.light td.day-cell.bde,:root.light td.day-cell.bdi,:root.light td.day-cell.bmo,
 :root.light td.day-cell.baf,:root.light td.day-cell.bba{color:#fff}
@@ -207,6 +210,7 @@ tbody tr:hover .edit-icon{opacity:1}
 .bpr{color:var(--proj);background:var(--proj-bg)}.bde{color:var(--st-des);background:var(--st-des-bg)}
 .bdi{color:var(--disp);background:var(--disp-bg)}.bmo{color:var(--st-mob);background:var(--st-mob-bg)}
 .baf{color:var(--af);background:var(--af-bg)}.bba{color:var(--base);background:var(--base-bg)}
+.btr{color:var(--st-trein);background:var(--st-trein-bg)}
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:500;display:none;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
 .overlay.open{display:flex}
 .modal{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;width:520px;max-width:95vw;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,.5)}
@@ -269,7 +273,7 @@ select.form-input{cursor:pointer;color-scheme:dark}
 .wtbl tbody tr:last-child td{border-bottom:none}
 .wtbl td.w-proj{color:var(--emb)}
 .wtbl td.w-mob{color:var(--des)}
-.wtbl td.w-trein{color:var(--proj)}
+.wtbl td.w-trein{color:var(--st-trein)}
 .wtbl td.w-pto{color:var(--femb)}
 .wtbl td.w-total{color:var(--text);font-weight:500;border-left:1px solid var(--border2)}
 .wtbl td.w-zero{color:var(--text3);opacity:.35}
@@ -278,6 +282,13 @@ select.form-input{cursor:pointer;color-scheme:dark}
 .wtbl tr.totals-row td.wfx{background:var(--bg3) !important}
 .preview-strip{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;min-height:28px;background:var(--bg3);border-radius:7px;padding:6px 8px}
 .preview-strip .b{font-size:9px;padding:2px 5px}
+/* modal de Tipos de Treinamento */
+.train-list{display:flex;flex-wrap:wrap;gap:6px;min-height:32px;background:var(--bg3);border-radius:8px;padding:10px}
+.train-tag{display:inline-flex;align-items:center;gap:6px;font-size:11px;padding:4px 6px 4px 9px}
+.train-tag-x{cursor:pointer;opacity:.6;font-size:13px;line-height:1;padding:0 2px}
+.train-tag-x:hover{opacity:1}
+.train-add-row{display:flex;gap:8px;margin-top:10px}
+.train-add-row .form-input{flex:1}
 
 
 /* ═══════════════════════════════════════════════════

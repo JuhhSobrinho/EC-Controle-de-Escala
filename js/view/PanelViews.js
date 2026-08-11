@@ -16,9 +16,8 @@ function getCategory(u){
   if(u==='BASE'||u==='HOTEL'||u==='RECAP') return 'pto';
   if(u.indexOf('AFAS')===0) return null;
   if(u.indexOf('FERIAS')===0||u.indexOf('FÉRIAS')===0||u.indexOf('Férias')===0||u==='FOLGA') return 'pto';
-  if(u.indexOf('TREIN')===0||u.indexOf('CURSO')===0||u==='IRATA'||u==='ASO'||
-     u==='HTS'||u==='NTS'||u==='JOTUN'||u.indexOf('RESG')===0||u.indexOf('IBIRITE')===0||
-     u.indexOf('IBIRITÉ')===0||u.indexOf('T-HUET')===0||u.indexOf('THUET')===0) return 'trein';
+  // treinamentos/cursos — lista configurável em Tipos de Treinamento (AppState.js)
+  if(isTrainingStatus(u)) return 'trein';
   // everything else = project (plataformas, P-xx, PMXL, MV-xx, OCYAN, ENGIE, MISC, etc.)
   if(u.length>0) return 'proj';
   return null;
@@ -470,7 +469,7 @@ function renderProfList(){
     h+='<td style="text-align:center">'+badge(t.irata,'irata')+'</td>';
     h+='<td style="text-align:center;font-family:monospace;color:var(--emb)">'+fh(proj)+'</td>';
     h+='<td style="text-align:center;font-family:monospace;color:var(--des)">'+fh(mob)+'</td>';
-    h+='<td style="text-align:center;font-family:monospace;color:var(--proj)">'+fh(trein)+'</td>';
+    h+='<td style="text-align:center;font-family:monospace;color:var(--st-trein)">'+fh(trein)+'</td>';
     h+='<td style="text-align:center;font-family:monospace;color:var(--femb)">'+fh(pto)+'</td>';
     h+='<td style="text-align:center"><button class="prof-edit-btn" onclick="openTecModal('+ti+')" title="Editar técnico">✏</button></td>';
     h+='</tr>';
@@ -512,7 +511,7 @@ function _util_classify(s){
   if(u==='F.EMB'||u==='F. EMB'||u==='F.EMBARQUE'||u==='FOLGA') return 'folga_emb';
   if(u.indexOf('FÉRIAS')>=0||u.indexOf('FERIAS')>=0) return 'ferias';
   if(['AFASTADO','INSS','ATESTADO'].some(function(x){return u.indexOf(x)>=0;})) return 'afastado';
-  if(['CURSO','IRATA','TREINAM','CBSP','T-HUET','THUET','RESGATE','NRS','NTS','ASO','HTS','JOTUN','IBIRITÉ','IBIRITE','PEAT'].some(function(x){return u.indexOf(x)>=0;})) return 'treinamento';
+  if(isTrainingStatus(u)||['CURSO','IRATA','TREINAM','CBSP','T-HUET','THUET','RESGATE','NRS','NTS','ASO','HTS','JOTUN','IBIRITÉ','IBIRITE','PEAT'].some(function(x){return u.indexOf(x)>=0;})) return 'treinamento';
   if(['DISP','BASE','HOTEL','RECAP'].some(function(x){return u.indexOf(x)>=0;})) return 'disponivel';
   if(['MOB','MOBILIZ'].some(function(x){return u.indexOf(x)>=0;})) return 'mobilizacao';
   if(u==='DES'||u==='DES.'||u.indexOf('DESLIGADO')>=0) return 'cancelado';

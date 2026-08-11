@@ -14,7 +14,7 @@ function hrsForStatus(u){
   if(u.indexOf('F.EMB')===0) return '08:00';
   if(u==='DES'||u==='DES.') return '12:00';
   if(u.indexOf('MOB')===0) return '12:00';
-  if(u.indexOf('DISP')===0||u==='BASE'||u==='HOTEL'||u==='RECAP'||u.indexOf('TREIN')===0) return '08:00';
+  if(u.indexOf('DISP')===0||u==='BASE'||u==='HOTEL'||u==='RECAP'||isTrainingStatus(u)) return '08:00';
   if(u.indexOf('AFAS')===0) return '';
   if(u) return '11:00';
   return '';
@@ -22,7 +22,8 @@ function hrsForStatus(u){
 function hrsColor(u){
   if(!u) return 'var(--text3)';
   if(u==='EMB') return 'var(--emb)';
-  if(u.indexOf('F.EMB')===0||u.indexOf('DISP')===0||u==='BASE'||u==='HOTEL'||u==='RECAP'||u.indexOf('TREIN')===0) return 'var(--disp)';
+  if(isTrainingStatus(u)) return 'var(--st-trein)';
+  if(u.indexOf('F.EMB')===0||u.indexOf('DISP')===0||u==='BASE'||u==='HOTEL'||u==='RECAP') return 'var(--disp)';
   if(u==='DES'||u==='DES.'||u.indexOf('MOB')===0) return 'var(--des)';
   return 'var(--proj)';
 }
