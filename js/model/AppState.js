@@ -47,7 +47,7 @@ function loadTrainingKeywords(){
     var saved = localStorage.getItem('ec_training_kw');
     if(saved){ var arr = JSON.parse(saved); if(Array.isArray(arr)) return arr; }
   }catch(e){}
-  return ['TREINAM','CURSO','IRATA','ASO','HTS','NTS','JOTUN','RESG','IBIRITE','IBIRITÉ','T-HUET','THUET'];
+  return ['TREINAM','CURSO','IRATA','ASO','HTS','NTS','JOTUN','RESG','IBIRITE','IBIRITÉ','T-HUET','THUET','NR'];
 }
 function saveTrainingKeywords(){
   localStorage.setItem('ec_training_kw', JSON.stringify(TRAINING_KEYWORDS));
