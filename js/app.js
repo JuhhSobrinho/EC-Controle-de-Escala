@@ -5,4 +5,5 @@
   initDashDates();
   refreshDash();
   buildWeeklySummary();
+  if(AppState.offline) markSyncError(); else markSyncOk();
 })();

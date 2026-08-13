@@ -114,6 +114,7 @@ async function applyImport(){
   if(!_importData)return;
 
   if(AppState.offline){
+    markSyncError();
     toast('Sem conexão com o banco — não é possível salvar', '#e85b5b');
     return;
   }
@@ -182,6 +183,7 @@ async function applyImport(){
   closeImport();
   buildTable(); // re-render to show real hrs in leque
   buildWeeklySummary(); // recalcula o Resumo de horas usando as horas reais recém-importadas
+  if(errors) markSyncError(); else markSyncOk();
   var msg='✓ '+applied+' horas salvas no banco'+(skipped?' · '+skipped+' fora do calendário':'')+(errors?' · '+errors+' com erro':'');
   toast(msg, errors?'#e85b5b':'#1fc98e');
 }

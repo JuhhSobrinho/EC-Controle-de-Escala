@@ -6,6 +6,7 @@ async function confirmCell(){
   var t=TECS[ti];
 
   if(AppState.offline){
+    markSyncError();
     toast('Sem conexão com o banco — não é possível salvar', '#e85b5b');
     closeCell();
     return;
@@ -28,11 +29,13 @@ async function confirmCell(){
     t.fo[di]=row.folga_override||0;
     t.rowId[di]=row.id;
     buildTable();
+    markSyncOk();
     toast(val?'Status salvo: '+val:'Status removido','#a78bfa');
     await maybeApplyAutoFolga(t, [di]);
   }catch(e){
     console.error('confirmCell', e);
     buildTable();
+    markSyncError();
     toast('Erro ao salvar: '+e.message,'#e85b5b');
   }
 }

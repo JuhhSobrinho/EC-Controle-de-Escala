@@ -56,6 +56,7 @@ async function applyFolgaRange(ti, from, to, value){
   var count = to - from + 1;
 
   if(AppState.offline){
+    markSyncError();
     toast('Sem conexão com o banco — não é possível salvar', '#e85b5b');
     return;
   }
@@ -77,10 +78,12 @@ async function applyFolgaRange(ti, from, to, value){
       t.rowId[di] = row.id;
     });
     buildTable();
+    markSyncOk();
     toast(msg, col);
   }catch(e){
     console.error('applyFolgaRange', e);
     buildTable();
+    markSyncError();
     toast('Erro ao salvar folga: '+e.message, '#e85b5b');
   }
 }

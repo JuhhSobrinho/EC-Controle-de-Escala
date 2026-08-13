@@ -11,6 +11,7 @@ async function confirmTec(){
   if(!name){toast('Nome obrigatório','#e85b5b');return;}
 
   if(AppState.offline){
+    markSyncError();
     toast('Sem conexão com o banco — não é possível salvar', '#e85b5b');
     return;
   }
@@ -32,8 +33,10 @@ async function confirmTec(){
     }
     closeTec();
     buildTable();
+    markSyncOk();
   }catch(e){
     console.error('confirmTec', e);
+    markSyncError();
     toast('Erro ao salvar técnico: '+e.message,'#e85b5b');
   }
 }
@@ -41,6 +44,7 @@ async function confirmTec(){
 async function deleteTec(){
   if(!confirm('Remover '+TECS[_tecIdx].n+'?'))return;
   if(AppState.offline){
+    markSyncError();
     toast('Sem conexão com o banco — não é possível remover', '#e85b5b');
     return;
   }
@@ -51,9 +55,11 @@ async function deleteTec(){
     TECS.splice(_tecIdx,1);
     closeTec();
     buildTable();
+    markSyncOk();
     toast(nm+' removido','#f5a623');
   }catch(e){
     console.error('deleteTec', e);
+    markSyncError();
     toast('Erro ao remover técnico: '+e.message,'#e85b5b');
   }
 }

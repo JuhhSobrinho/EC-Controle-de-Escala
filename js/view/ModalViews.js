@@ -62,11 +62,14 @@ function openNewTecModal(){
 }
 function closeTec(){document.getElementById('tecOverlay').classList.remove('open');}
 
-/* -- previsão em bloco -- */
+/* -- previsão em bloco (um ou mais técnicos de uma vez) -- */
 var _blkSel='EMB';
+var _blockSelectedTi={}; // ti -> true, mantém a seleção mesmo filtrando a busca
+
 function openBlockModal(){
-  var sel=document.getElementById('blockTec');
-  sel.innerHTML=TECS.map(function(t,i){return '<option value="'+i+'">'+t.n+'</option>';}).join('');
+  _blockSelectedTi={};
+  document.getElementById('blockTecSearch').value='';
+  renderBlockTecList();
   document.getElementById('blockStart').value=toISO(DATES[Math.min(T_IDX,DATES.length-1)]);
   document.getElementById('blockEnd').value=toISO(DATES[Math.min(T_IDX+14,DATES.length-1)]);
   _blkSel='EMB';
@@ -76,6 +79,42 @@ function openBlockModal(){
   document.getElementById('blockOverlay').classList.add('open');
 }
 function closeBlock(){document.getElementById('blockOverlay').classList.remove('open');}
+
+function renderBlockTecList(){
+  var q=(document.getElementById('blockTecSearch')||{value:''}).value.toLowerCase();
+  var list=document.getElementById('blockTecList');
+  var html=TECS.map(function(t,ti){
+    if(q && t.n.toLowerCase().indexOf(q)<0) return '';
+    var isChecked=!!_blockSelectedTi[ti];
+    return '<label class="block-tec-row"><input type="checkbox" data-ti="'+ti+'" '+(isChecked?'checked':'')+' onchange="toggleBlockTec('+ti+',this.checked)">'+t.n+'</label>';
+  }).join('');
+  list.innerHTML=html||'<div style="padding:10px;text-align:center;color:var(--text3);font-size:12px">Nenhum técnico encontrado</div>';
+  updateBlockTecCount();
+}
+
+function toggleBlockTec(ti, checked){
+  if(checked) _blockSelectedTi[ti]=true; else delete _blockSelectedTi[ti];
+  updateBlockTecCount();
+}
+
+function selectAllBlockTec(state){
+  document.querySelectorAll('#blockTecList input[type="checkbox"]').forEach(function(cb){
+    var ti=parseInt(cb.getAttribute('data-ti'));
+    cb.checked=state;
+    if(state) _blockSelectedTi[ti]=true; else delete _blockSelectedTi[ti];
+  });
+  updateBlockTecCount();
+}
+
+function updateBlockTecCount(){
+  var n=Object.keys(_blockSelectedTi).length;
+  var el=document.getElementById('blockTecCount');
+  if(el) el.textContent=n+' selecionado'+(n!==1?'s':'');
+}
+
+function getSelectedBlockTecIds(){
+  return Object.keys(_blockSelectedTi).map(Number);
+}
 function previewBlock(){
   var s=idxOf(fromISO(document.getElementById('blockStart').value));
   var e=idxOf(fromISO(document.getElementById('blockEnd').value));

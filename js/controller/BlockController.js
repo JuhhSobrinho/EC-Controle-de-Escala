@@ -1,30 +1,41 @@
-/* ── BlockController: "Previsão em bloco" — status em um intervalo de datas para um técnico ── */
+/* ── BlockController: "Previsão em bloco" — status em um intervalo de datas para um ou mais técnicos ── */
 async function confirmBlock(){
-  var ti=parseInt(document.getElementById('blockTec').value);
+  var tis=getSelectedBlockTecIds();
   var s=idxOf(fromISO(document.getElementById('blockStart').value));
   var e=idxOf(fromISO(document.getElementById('blockEnd').value));
   var custom=document.getElementById('blockCustom').value.trim();
   var v=custom||_blkSel;
+  if(!tis.length){toast('Selecione ao menos um técnico','#e85b5b');return;}
   if(s===null||e===null||s>e||!v){toast('Preencha todos os campos','#e85b5b');return;}
   closeBlock();
 
-  if(custom && s<e){
-    // Status digitado à mão = código de projeto/plataforma específico → é certeza que é
-    // embarque: 1º dia MOB., último dia DES., os dias do meio recebem o projeto digitado.
-    await applyBlockAsProject(ti, s, e, custom);
-  } else {
-    await applyDragFill(ti, s, e, v);
+  var asProject = custom && s<e;
+  var ok=0;
+  for(var i=0;i<tis.length;i++){
+    var ti=tis[i];
+    var success = asProject
+      ? await applyBlockAsProject(ti, s, e, custom, tis.length>1)
+      : await applyDragFill(ti, s, e, v, tis.length>1);
+    if(success) ok++;
+  }
+
+  var total=tis.length;
+  if(total>1){
+    if(ok===total) toast('Previsão aplicada a '+total+' técnicos', '#1fc98e');
+    else toast(ok+' de '+total+' técnicos atualizados — veja os erros acima', ok>0?'#f5a623':'#e85b5b');
   }
 }
 
-async function applyBlockAsProject(ti, s, e, custom){
+/* silent=true suprime o toast individual de sucesso (usado ao aplicar a vários técnicos de uma vez). */
+async function applyBlockAsProject(ti, s, e, custom, silent){
   var t=TECS[ti];
   if(!t._edits) t._edits={};
   for(var i=s;i<=e;i++) t._edits[i]=true;
 
   if(AppState.offline){
+    markSyncError();
     toast('Sem conexão com o banco — não é possível salvar', '#e85b5b');
-    return;
+    return false;
   }
 
   var days=[];
@@ -41,11 +52,15 @@ async function applyBlockAsProject(ti, s, e, custom){
       t.rowId[di]=row.id;
     });
     buildTable();
-    toast('Bloco aplicado: MOB. → '+custom+' → DES. ('+(e-s+1)+' dias)', '#1fc98e');
+    markSyncOk();
+    if(!silent) toast('Bloco aplicado: MOB. → '+custom+' → DES. ('+(e-s+1)+' dias)', '#1fc98e');
     await maybeApplyAutoFolga(t, [e]); // o DES. do fim do bloco também dispara a folga automática
+    return true;
   }catch(err){
-    console.error('applyBlockAsProject', err);
+    console.error('applyBlockAsProject', t.n, err);
     buildTable();
-    toast('Erro ao salvar bloco: '+err.message, '#e85b5b');
+    markSyncError();
+    toast('Erro ao salvar bloco de '+t.n+': '+err.message, '#e85b5b');
+    return false;
   }
 }

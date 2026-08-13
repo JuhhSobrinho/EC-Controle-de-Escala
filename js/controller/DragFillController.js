@@ -62,16 +62,19 @@ function dfClear(){
   });
 }
 
-/* Aplica o mesmo status a um intervalo [from,to] de um técnico e persiste no Supabase. */
-async function applyDragFill(ti, from, to, val){
+/* Aplica o mesmo status a um intervalo [from,to] de um técnico e persiste no Supabase.
+   silent=true suprime o toast de sucesso (usado quando aplicado a vários técnicos de uma vez,
+   pra não disparar um toast atrás do outro) — erro sempre é mostrado. Retorna true/false. */
+async function applyDragFill(ti, from, to, val, silent){
   var t=TECS[ti];
   if(!t._edits) t._edits={};
   for(var i=from;i<=to;i++) t._edits[i]=true;
   var count = to - from + 1;
 
   if(AppState.offline){
+    markSyncError();
     toast('Sem conexão com o banco — não é possível salvar', '#e85b5b');
-    return;
+    return false;
   }
 
   var days=[];
@@ -91,12 +94,16 @@ async function applyDragFill(ti, from, to, val){
       t.rowId[di] = row.id;
     });
     buildTable();
-    toast(msg, col);
+    markSyncOk();
+    if(!silent) toast(msg, col);
     await maybeApplyAutoFolga(t, days.map(function(d){return d.di;}));
+    return true;
   }catch(e){
     console.error('applyDragFill', e);
+    markSyncError();
     buildTable();
-    toast('Erro ao salvar intervalo: '+e.message, '#e85b5b');
+    toast('Erro ao salvar intervalo de '+t.n+': '+e.message, '#e85b5b');
+    return false;
   }
 }
 
