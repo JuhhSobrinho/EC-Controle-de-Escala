@@ -77,13 +77,20 @@ async function applyDragFill(ti, from, to, val, silent){
     return false;
   }
 
+  var msg = val ? 'Preenchidos '+count+' dias com '+val : 'Limpos '+count+' dias';
+  var col = val ? '#1fc98e' : '#e85b5b';
+
+  if(isSyncPaused()){
+    for(var k=from;k<=to;k++) queueCellPatch(t, ti, k, {status: val}, true);
+    buildTable();
+    if(!silent) toast(msg+' (pendente — sincronização pausada)', '#f5a623');
+    return true;
+  }
+
   var days=[];
   for(var j=from;j<=to;j++){
     days.push({iso: toISO(DATES[j]), rowId: t.rowId[j], patch: {status: val}, di: j});
   }
-
-  var msg = val ? 'Preenchidos '+count+' dias com '+val : 'Limpos '+count+' dias';
-  var col = val ? '#1fc98e' : '#e85b5b';
 
   try{
     var rows = await EscalaModel.saveRange(t.id, days);
@@ -91,6 +98,7 @@ async function applyDragFill(ti, from, to, val, silent){
       var di = days[idx].di;
       t.d[di] = row.status||'';
       t.fo[di] = row.folga_override||0;
+      t.obs[di] = row.obs||'';
       t.rowId[di] = row.id;
     });
     buildTable();

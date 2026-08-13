@@ -66,9 +66,12 @@ function buildTable(){
       var tc2=i===T_IDX?' today-col':'', ec=(t._edits&&t._edits[i])?' edited':'';
       var wk2=isWeekend(DATES[i])?' weekend-col':'';
       var folgaCls = t.fo[i] ? ' folga-over' : '';
-      var cellCls = 'tc day-cell'+(bc?' '+bc:'')+tc2+ec+wk2+folgaCls;
+      var obsText = t.obs && t.obs[i] ? t.obs[i] : '';
+      var obsCls = obsText ? ' has-obs' : '';
+      var cellCls = 'tc day-cell'+(bc?' '+bc:'')+tc2+ec+wk2+folgaCls+obsCls;
+      var obsAttr = obsText ? ' title="'+escAttr('Observação: '+obsText)+'"' : '';
       var inner = bc ? v : '<span class="empty-dot">&middot;</span>';
-      h+='<td class="'+cellCls+'" data-ti="'+ti+'" data-di="'+i+'" onmousedown="dfStart(event,'+ti+','+i+')" onmouseover="dfOver(event,'+ti+','+i+')" onmouseup="dfEnd(event,'+ti+','+i+')">'+inner+'</td>';
+      h+='<td class="'+cellCls+'" data-ti="'+ti+'" data-di="'+i+'"'+obsAttr+' onmousedown="dfStart(event,'+ti+','+i+')" onmouseover="dfOver(event,'+ti+','+i+')" onmouseup="dfEnd(event,'+ti+','+i+')">'+inner+'</td>';
     }
     h+='</tr>';
     // detail row — info panel fixo + células de horas por dia

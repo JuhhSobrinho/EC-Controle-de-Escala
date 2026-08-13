@@ -38,6 +38,15 @@ async function applyBlockAsProject(ti, s, e, custom, silent){
     return false;
   }
 
+  if(isSyncPaused()){
+    queueCellPatch(t, ti, s, {status:'MOB.'}, true);
+    for(var k=s+1;k<e;k++) queueCellPatch(t, ti, k, {status:custom}, true);
+    queueCellPatch(t, ti, e, {status:'DES.'}, true);
+    buildTable();
+    if(!silent) toast('Bloco pendente — sincronização pausada ('+(e-s+1)+' dias)', '#f5a623');
+    return true;
+  }
+
   var days=[];
   days.push({iso: toISO(DATES[s]), rowId: t.rowId[s], patch:{status:'MOB.'}, di:s});
   for(var j=s+1;j<e;j++) days.push({iso: toISO(DATES[j]), rowId: t.rowId[j], patch:{status:custom}, di:j});
@@ -49,6 +58,7 @@ async function applyBlockAsProject(ti, s, e, custom, silent){
       var di=days[idx].di;
       t.d[di]=row.status||'';
       t.fo[di]=row.folga_override||0;
+      t.obs[di]=row.obs||'';
       t.rowId[di]=row.id;
     });
     buildTable();

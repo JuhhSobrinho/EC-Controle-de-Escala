@@ -26,6 +26,7 @@ function openCellModal(ti,di){
   document.getElementById('cellSub').textContent=TECS[ti].n+' · '+dp[0]+'/'+dp[1];
   document.getElementById('cellCustom').value='';
   document.getElementById('cellFolga').checked=!!TECS[ti].fo[di];
+  document.getElementById('cellObs').value=TECS[ti].obs[di]||'';
   buildStatusGrid('statusGrid',_cSel,function(v){_cSel=v;document.getElementById('cellCustom').value='';});
   document.getElementById('cellOverlay').classList.add('open');
 }

@@ -170,6 +170,7 @@ async function applyImport(){
         t.d[di]=row.status||'';
         t.fo[di]=row.folga_override||0;
         t.hr[di]=row.hr_reais?row.hr_reais.slice(0,5):null;
+        t.obs[di]=row.obs||'';
         t.rowId[di]=row.id;
         applied++;
       });

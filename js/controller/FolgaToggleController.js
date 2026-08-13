@@ -61,13 +61,20 @@ async function applyFolgaRange(ti, from, to, value){
     return;
   }
 
+  var msg = value ? 'Marcado como folga: '+count+' dia'+(count!==1?'s':'') : 'Folga removida: '+count+' dia'+(count!==1?'s':'');
+  var col = value ? '#4a9eff' : '#8a91a8';
+
+  if(isSyncPaused()){
+    for(var k=from;k<=to;k++) queueCellPatch(t, ti, k, {folga_override: value}, false);
+    buildTable();
+    toast(msg+' (pendente — sincronização pausada)', '#f5a623');
+    return;
+  }
+
   var days=[];
   for(var j=from;j<=to;j++){
     days.push({iso: toISO(DATES[j]), rowId: t.rowId[j], patch: {folga_override: value}, di: j});
   }
-
-  var msg = value ? 'Marcado como folga: '+count+' dia'+(count!==1?'s':'') : 'Folga removida: '+count+' dia'+(count!==1?'s':'');
-  var col = value ? '#4a9eff' : '#8a91a8';
 
   try{
     var rows = await EscalaModel.saveRange(t.id, days);
@@ -75,6 +82,7 @@ async function applyFolgaRange(ti, from, to, value){
       var di = days[idx].di;
       t.d[di] = row.status||'';
       t.fo[di] = row.folga_override||0;
+      t.obs[di] = row.obs||'';
       t.rowId[di] = row.id;
     });
     buildTable();

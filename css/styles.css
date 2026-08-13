@@ -60,6 +60,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .hdr-btn.on{background:var(--st-femb-bg);border-color:var(--st-femb);color:var(--st-femb)}
 .hdr-btn.sync-ok{background:var(--emb-bg);border-color:rgba(31,201,142,.3);color:var(--accent)}
 .hdr-btn.sync-err{background:var(--af-bg);border-color:var(--af);color:var(--af)}
+.hdr-btn.sync-paused{background:rgba(245,166,35,.13);border-color:rgba(245,166,35,.4);color:var(--under)}
 td.day-cell.folga-preview{outline:2px dashed var(--st-femb);outline-offset:-2px}
 .unsaved-dot{width:7px;height:7px;background:#f5a623;border-radius:50%;display:none}
 .unsaved-dot.show{display:block}
@@ -135,7 +136,10 @@ tbody td.tc{text-align:center;font-family:'JetBrains Mono',monospace;font-size:1
 tbody tr:last-child td{border-bottom:none}
 .func-tag{font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace}
 td.edited{outline:2px solid rgba(167,139,250,.55);outline-offset:-2px;z-index:1}
-td.day-cell{cursor:pointer;transition:filter .1s}
+td.day-cell{cursor:pointer;transition:filter .1s;position:relative}
+/* indicador de observação (obs) no dia, tipo a "notinha" do Excel: triângulo vermelho no canto */
+td.day-cell.has-obs::after{content:'';position:absolute;top:0;right:0;width:0;height:0;
+  border-style:solid;border-width:0 7px 7px 0;border-color:transparent #e85b5b transparent transparent;pointer-events:none}
 td.day-cell:hover{filter:brightness(1.12)}
 td.day-cell.drag-origin{outline:2px solid var(--accent);outline-offset:-2px;z-index:1}
 td.day-cell.drag-preview{background:rgba(31,201,142,.18) !important;outline:1px dashed var(--accent);outline-offset:-1px}
