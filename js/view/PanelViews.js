@@ -531,7 +531,7 @@ function _util_classify(s){
   if(u==='F.EMB'||u==='F. EMB'||u==='F.EMBARQUE'||u==='FOLGA') return 'folga_emb';
   if(u.indexOf('FÉRIAS')>=0||u.indexOf('FERIAS')>=0) return 'ferias';
   if(['AFASTADO','INSS','ATESTADO'].some(function(x){return u.indexOf(x)>=0;})) return 'afastado';
-  if(isTrainingStatus(u)||['CURSO','IRATA','TREINAM','CBSP','T-HUET','THUET','RESGATE','NRS','NTS','ASO','HTS','JOTUN','IBIRITÉ','IBIRITE','PEAT'].some(function(x){return u.indexOf(x)>=0;})) return 'treinamento';
+  if(isTrainingStatus(u)||['CURSO','IRATA','TREINAM','CBSP','T-HUET','THUET','RESGATE','NRS','NTS','ASO','HTS','JOTUN','IBIRITÉ','IBIRITE','PEAT','NR','REGRA/OURO'].some(function(x){return u.indexOf(x)>=0;})) return 'treinamento';
   if(['DISP','BASE','HOTEL','RECAP'].some(function(x){return u.indexOf(x)>=0;})) return 'disponivel';
   if(['MOB','MOBILIZ'].some(function(x){return u.indexOf(x)>=0;})) return 'mobilizacao';
   if(u==='DES'||u==='DES.'||u.indexOf('DESLIGADO')>=0) return 'cancelado';
