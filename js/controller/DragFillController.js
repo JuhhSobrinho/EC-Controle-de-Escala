@@ -5,20 +5,20 @@
 var _df = null; // {ti, diStart, diEnd, val} durante o arrasto
 
 function dfStart(e, ti, di){
-  if(window.folgaMode){ ffStart(ti, di); return; }
+  if(window.folgaMode){ ffStart(e, ti, di); return; }
   // right-click or shift-click → ignore, let normal click through
   if(e.button !== 0) return;
   var srcVal = TECS[ti].d[di] || '';
   e.preventDefault();
   _df = {ti: ti, diStart: di, diEnd: di, val: srcVal};
-  dfHighlight();
+  dfHighlight(e);
 }
 
 function dfOver(e, ti, di){
-  if(window.folgaMode){ ffOver(ti, di); return; }
+  if(window.folgaMode){ ffOver(e, ti, di); return; }
   if(!_df || _df.ti !== ti) return;
   _df.diEnd = di;
-  dfHighlight();
+  dfHighlight(e);
 }
 
 function dfEnd(e, ti, di){
@@ -37,22 +37,26 @@ function dfEnd(e, ti, di){
   applyDragFill(_df ? _df.ti : ti, from, to, val);
 }
 
-function dfHighlight(){
+function dfHighlight(e){
   // clear all
   document.querySelectorAll('.drag-origin,.drag-preview').forEach(function(el){
     el.classList.remove('drag-origin','drag-preview');
   });
-  if(!_df) return;
+  if(!_df){ hideDragCountBadge(); return; }
   var from = Math.min(_df.diStart, _df.diEnd);
   var to   = Math.max(_df.diStart, _df.diEnd);
   var row  = document.querySelector('.data-row[data-ti="'+_df.ti+'"]');
-  if(!row) return;
-  var isClear = (_df.val === '');
-  row.querySelectorAll('.day-cell').forEach(function(td){
-    var di = parseInt(td.getAttribute('data-di'));
-    if(di === _df.diStart) td.classList.add('drag-origin');
-    else if(di >= from && di <= to) td.classList.add(isClear ? 'drag-clear' : 'drag-preview');
-  });
+  if(row){
+    var isClear = (_df.val === '');
+    row.querySelectorAll('.day-cell').forEach(function(td){
+      var di = parseInt(td.getAttribute('data-di'));
+      if(di === _df.diStart) td.classList.add('drag-origin');
+      else if(di >= from && di <= to) td.classList.add(isClear ? 'drag-clear' : 'drag-preview');
+    });
+  }
+  var count = to - from + 1;
+  if(count > 1 && e) showDragCountBadge(count, e.clientX, e.clientY);
+  else hideDragCountBadge();
 }
 
 function dfClear(){
@@ -60,6 +64,22 @@ function dfClear(){
   document.querySelectorAll('.drag-origin,.drag-preview,.drag-clear').forEach(function(el){
     el.classList.remove('drag-origin','drag-preview','drag-clear');
   });
+  hideDragCountBadge();
+}
+
+/* contador flutuante de "N células selecionadas" durante o arrasto — usado tanto pelo
+   arrasto normal de status (aqui) quanto pelo modo "Marcar folga" (FolgaToggleController). */
+function showDragCountBadge(count, x, y){
+  var el = document.getElementById('dragCountBadge');
+  if(!el) return;
+  el.textContent = count+' célula'+(count!==1?'s':'')+' selecionada'+(count!==1?'s':'');
+  el.style.left = (x+14)+'px';
+  el.style.top = (y+14)+'px';
+  el.classList.add('show');
+}
+function hideDragCountBadge(){
+  var el = document.getElementById('dragCountBadge');
+  if(el) el.classList.remove('show');
 }
 
 /* Aplica o mesmo status a um intervalo [from,to] de um técnico e persiste no Supabase.

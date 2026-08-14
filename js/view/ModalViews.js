@@ -120,15 +120,22 @@ function previewBlock(){
   var s=idxOf(fromISO(document.getElementById('blockStart').value));
   var e=idxOf(fromISO(document.getElementById('blockEnd').value));
   var custom=document.getElementById('blockCustom').value.trim();
+  // v pode ser '' de propósito (opção "Limpar" do grid) — isso é uma seleção válida,
+  // não "campo vazio". _blkSel sempre começa em 'EMB', então só fica '' se o usuário
+  // realmente clicou em Limpar; por isso não dá pra usar !v aqui pra validar.
   var v=custom||_blkSel, bc=badgeCls(v);
-  if(s===null||e===null||s>e||!v){
+  if(s===null||e===null||s>e){
     document.getElementById('previewStrip').innerHTML='<span style="font-size:11px;color:var(--text3)">—</span>';
     document.getElementById('previewCount').textContent='';return;
   }
   var count=e-s+1;
   document.getElementById('previewCount').textContent='('+count+' dia'+(count!==1?'s':'')+')';
   var strip='';
-  for(var i=s;i<=Math.min(e,s+19);i++){var dp=DATES[i].split('/');strip+='<span class="b '+bc+'" title="'+dp[0]+'/'+dp[1]+'">'+v+'</span>';}
-  if(count>20)strip+='<span style="font-size:10px;color:var(--text3);padding:2px 4px">+'+(count-20)+' mais</span>';
+  if(!custom && _blkSel===''){
+    strip='<span class="b" style="background:var(--af-bg);color:var(--af);border:1px dashed var(--af)">Limpar '+count+' dia'+(count!==1?'s':'')+'</span>';
+  }else{
+    for(var i=s;i<=Math.min(e,s+19);i++){var dp=DATES[i].split('/');strip+='<span class="b '+bc+'" title="'+dp[0]+'/'+dp[1]+'">'+v+'</span>';}
+    if(count>20)strip+='<span style="font-size:10px;color:var(--text3);padding:2px 4px">+'+(count-20)+' mais</span>';
+  }
   document.getElementById('previewStrip').innerHTML=strip;
 }

@@ -9,16 +9,16 @@ function toggleFolgaMode(){
   toast(folgaMode ? 'Modo folga ativado — clique ou arraste dias para marcar/desmarcar' : 'Modo folga desativado', folgaMode?'#4a9eff':'#8a91a8');
 }
 
-function ffStart(ti, di){
+function ffStart(e, ti, di){
   var current = !!TECS[ti].fo[di];
   _ff = {ti: ti, diStart: di, diEnd: di, targetValue: current ? 0 : 1};
-  ffHighlight();
+  ffHighlight(e);
 }
 
-function ffOver(ti, di){
+function ffOver(e, ti, di){
   if(!_ff || _ff.ti !== ti) return;
   _ff.diEnd = di;
-  ffHighlight();
+  ffHighlight(e);
 }
 
 function ffEnd(ti, di){
@@ -31,22 +31,27 @@ function ffEnd(ti, di){
   applyFolgaRange(t, from, to, targetValue);
 }
 
-function ffHighlight(){
+function ffHighlight(e){
   document.querySelectorAll('.folga-preview').forEach(function(el){el.classList.remove('folga-preview');});
-  if(!_ff) return;
+  if(!_ff){ hideDragCountBadge(); return; }
   var from = Math.min(_ff.diStart, _ff.diEnd);
   var to   = Math.max(_ff.diStart, _ff.diEnd);
   var row  = document.querySelector('.data-row[data-ti="'+_ff.ti+'"]');
-  if(!row) return;
-  row.querySelectorAll('.day-cell').forEach(function(td){
-    var di = parseInt(td.getAttribute('data-di'));
-    if(di >= from && di <= to) td.classList.add('folga-preview');
-  });
+  if(row){
+    row.querySelectorAll('.day-cell').forEach(function(td){
+      var di = parseInt(td.getAttribute('data-di'));
+      if(di >= from && di <= to) td.classList.add('folga-preview');
+    });
+  }
+  var count = to - from + 1;
+  if(count > 1 && e) showDragCountBadge(count, e.clientX, e.clientY);
+  else hideDragCountBadge();
 }
 
 function ffClear(){
   _ff = null;
   document.querySelectorAll('.folga-preview').forEach(function(el){el.classList.remove('folga-preview');});
+  hideDragCountBadge();
 }
 
 async function applyFolgaRange(ti, from, to, value){

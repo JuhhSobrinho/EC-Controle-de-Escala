@@ -4,9 +4,11 @@ async function confirmBlock(){
   var s=idxOf(fromISO(document.getElementById('blockStart').value));
   var e=idxOf(fromISO(document.getElementById('blockEnd').value));
   var custom=document.getElementById('blockCustom').value.trim();
+  // v pode ser '' de propósito (opção "Limpar" do grid de status) — não é campo vazio,
+  // então a validação não pode barrar nesse caso (ver mesmo comentário em previewBlock).
   var v=custom||_blkSel;
   if(!tis.length){toast('Selecione ao menos um técnico','#e85b5b');return;}
-  if(s===null||e===null||s>e||!v){toast('Preencha todos os campos','#e85b5b');return;}
+  if(s===null||e===null||s>e){toast('Preencha todos os campos','#e85b5b');return;}
   closeBlock();
 
   var asProject = custom && s<e;
