@@ -72,22 +72,23 @@ function generateReport(){
   var wb=XLSX.utils.book_new();
   var DOW_PT_FULL={0:'Domingo',1:'Segunda',2:'Terça',3:'Quarta',4:'Quinta',5:'Sexta',6:'Sábado'};
   TECS.forEach(function(t){
-    var rows=[['Data','Dia','Local / Status','100%','Horas']];
+    var rows=[['Data','Dia','Local / Status','100%','Horas','Observação']];
     days.forEach(function(d){
       var status = d.idx>=0 ? (t.d[d.idx]||'') : '';
       var u=status.trim().toUpperCase();
       var cem=isPTO(u)?'100%':'';
       var hrs=hrsForStatus(u);
       var dowLabel=DOW_PT_FULL[d.date.getDay()];
-      rows.push([d.dmy, dowLabel, status, cem, hrs||'']);
+      var obs = d.idx>=0 && t.obs ? (t.obs[d.idx]||'') : '';
+      rows.push([d.dmy, dowLabel, status, cem, hrs||'', obs]);
     });
     // safe sheet name: max 31 chars, no special chars
     var sheetName=t.n.replace(/[:\\\/\?\*\[\]]/g,'').substring(0,28);
     var ws=XLSX.utils.aoa_to_sheet(rows);
     // column widths
-    ws['!cols']=[{wch:12},{wch:10},{wch:22},{wch:6},{wch:8}];
+    ws['!cols']=[{wch:12},{wch:10},{wch:22},{wch:6},{wch:8},{wch:40}];
     // header style (via SheetJS CE — limited, just bold via s property)
-    ['A1','B1','C1','D1','E1'].forEach(function(cell){
+    ['A1','B1','C1','D1','E1','F1'].forEach(function(cell){
       if(ws[cell]) ws[cell].s={font:{bold:true}};
     });
     XLSX.utils.book_append_sheet(wb,ws,sheetName);
