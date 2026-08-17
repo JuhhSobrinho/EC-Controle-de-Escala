@@ -206,3 +206,47 @@ async function applyImport(){
   var msg='✓ '+applied+' horas salvas no banco'+(skipped?' · '+skipped+' fora do calendário':'')+(errors?' · '+errors+' com erro':'');
   toast(msg, errors?'#e85b5b':'#1fc98e');
 }
+
+/* Apaga todas as horas reais importadas (escala.hr_reais) de todos os técnicos, pra poder
+   reimportar do zero. Só mexe nos dias que já têm hr_reais preenchido — ou seja, cobre
+   exatamente o período que foi importado (do dia mais antigo ao mais recente com hora),
+   sem tocar em status/folga/observação nem em dias que nunca tiveram hora importada. */
+async function clearImportedHours(){
+  if(AppState.offline){
+    markSyncError();
+    toast('Sem conexão com o banco — não é possível limpar', '#e85b5b');
+    return;
+  }
+  if(!confirm('Isso vai apagar TODAS as horas reais importadas (hr_reais) de todos os técnicos, em todo o período já importado. Os status e folgas não são afetados. Confirmar?')) return;
+
+  toast('Limpando horas importadas...', '#8a91a8');
+  var cleared=0, errors=0;
+
+  await Promise.all(TECS.map(async function(t){
+    var days=[];
+    for(var di=0; di<DATES.length; di++){
+      if(t.hr[di]!==null && t.rowId[di]) days.push({iso: toISO(DATES[di]), rowId: t.rowId[di], patch: {hr_reais: null}, di: di});
+    }
+    if(!days.length) return;
+    try{
+      var rows=await EscalaModel.saveRange(t.id, days);
+      rows.forEach(function(row, idx){
+        var di=days[idx].di;
+        t.d[di]=row.status||'';
+        t.fo[di]=row.folga_override||0;
+        t.obs[di]=row.obs||'';
+        t.hr[di]=row.hr_reais?row.hr_reais.slice(0,5):null;
+        t.rowId[di]=row.id;
+        cleared++;
+      });
+    }catch(e){
+      console.error('clearImportedHours', t.n, e);
+      errors+=days.length;
+    }
+  }));
+
+  buildTable();
+  buildWeeklySummary();
+  if(errors){ markSyncError(); toast(cleared+' hora(s) limpas, '+errors+' com erro','#e85b5b'); }
+  else{ markSyncOk(); toast(cleared+' hora(s) importada(s) apagadas — pronto pra reimportar','#1fc98e'); }
+}
