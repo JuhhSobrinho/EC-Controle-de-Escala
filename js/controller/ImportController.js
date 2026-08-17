@@ -59,12 +59,30 @@ function buildImportUI(rows){
 
   // auto-match
   _importMap={};
-  var matched=0, unmatched=0;
+  var scores={};
   xlsxNames.forEach(function(xn){
     var m=bestMatch(xn);
-    if(m.score>=0.5){_importMap[xn]=m.ti;matched++;}
-    else{_importMap[xn]=-1;unmatched++;}
+    scores[xn]=m.score;
+    _importMap[xn] = m.score>=0.5 ? m.ti : -1;
   });
+  // evita que duas pessoas DIFERENTES da planilha (ex: sobrenomes em comum tipo "Silva"/"Souza")
+  // caiam auto-mapeadas no mesmo técnico — nesse caso as horas de uma sobrescreveriam
+  // silenciosamente as horas da outra nos dias em que ambas trabalharam, e o resultado parece
+  // "hora errada em alguns dias". Mantém só a correspondência de maior confiança por técnico;
+  // as demais caem em "não mapear" pro usuário resolver manualmente.
+  var bestForTi={};
+  xlsxNames.forEach(function(xn){
+    var ti=_importMap[xn];
+    if(ti<0) return;
+    if(!bestForTi[ti] || scores[xn]>bestForTi[ti].score) bestForTi[ti]={xn:xn, score:scores[xn]};
+  });
+  xlsxNames.forEach(function(xn){
+    var ti=_importMap[xn];
+    if(ti<0) return;
+    if(bestForTi[ti].xn!==xn) _importMap[xn]=-1;
+  });
+  var matched=0, unmatched=0;
+  xlsxNames.forEach(function(xn){ if(_importMap[xn]>=0) matched++; else unmatched++; });
 
   // count data points
   var totalRows=rows.filter(function(r){
