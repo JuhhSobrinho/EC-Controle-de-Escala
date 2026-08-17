@@ -56,13 +56,12 @@ function getDatesInRange(from,to){
   }
   return out;
 }
-function isPTO(u){
-  if(!u)return false;
-  if(u.indexOf('F.EMB')===0)return true;
-  if(u.indexOf('FOLGA')===0)return true;
-  if(u==='BASE'||u==='HOTEL'||u==='RECAP')return true;
-  if(u.indexOf('FERIAS')===0||u.indexOf('FÉRIAS')===0||u.indexOf('Férias')===0)return true;
-  return false;
+/* 100% no relatório = dia de F.EMB (folga pós-embarque) OU dia marcado com
+   "Dia de folga" (folga_override) no banco — não é mais um chute por texto de status. */
+function isPTO(u, folgaOverride){
+  if(folgaOverride) return true;
+  if(!u) return false;
+  return u.indexOf('F.EMB')===0;
 }
 function generateReport(){
   var idx=parseInt(document.getElementById('repPeriod').value);
@@ -76,7 +75,8 @@ function generateReport(){
     days.forEach(function(d){
       var status = d.idx>=0 ? (t.d[d.idx]||'') : '';
       var u=status.trim().toUpperCase();
-      var cem=isPTO(u)?'100%':'';
+      var folgaOv = d.idx>=0 && t.fo ? !!t.fo[d.idx] : false;
+      var cem=isPTO(u, folgaOv)?'100%':'';
       var hrs=hrsForStatus(u);
       var dowLabel=DOW_PT_FULL[d.date.getDay()];
       var obs = d.idx>=0 && t.obs ? (t.obs[d.idx]||'') : '';
@@ -93,9 +93,10 @@ function generateReport(){
     });
     XLSX.utils.book_append_sheet(wb,ws,sheetName);
   });
-  // file name: relatorio-15maio-15jun.xlsx
-  var fmtFile=function(d){return String(d.getDate()).padStart(2,'0')+String(d.getMonth()+1).padStart(2,'0')+d.getFullYear();};
-  var fname='relatorio-'+fmtFile(period.from)+'-'+fmtFile(period.to)+'.xlsx';
+  // file name baseado no(s) mês(es) do período: "Relatório julho-agosto.xlsx" (ou só "Relatório julho.xlsx" se não cruzar mês)
+  var MESES_PT=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  var mesFrom=MESES_PT[period.from.getMonth()], mesTo=MESES_PT[period.to.getMonth()];
+  var fname='Relatório '+mesFrom+(mesFrom!==mesTo?'-'+mesTo:'')+'.xlsx';
   XLSX.writeFile(wb,fname);
   closeReport();
   toast('Relatório gerado: '+fname,'#1fc98e');
