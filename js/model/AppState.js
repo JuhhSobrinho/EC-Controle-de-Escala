@@ -35,7 +35,7 @@ var expandedRows = {};
 
 var STATUSES=[
   {v:'EMB',cls:'be',label:'EMB'},{v:'F.EMB',cls:'bfe',label:'F.EMB'},
-  {v:'DES',cls:'bde',label:'DES'},{v:'DISP.',cls:'bdi',label:'DISP.'},
+  {v:'DES',cls:'bde',label:'DES'},{v:'FOLGA',cls:'bdi',label:'FOLGA'},
   {v:'MOB.',cls:'bmo',label:'MOB.'},{v:'TREINAM.',cls:'btr',label:'TREINAM.'},
   {v:'BASE',cls:'bba',label:'BASE'},{v:'AFASTADO',cls:'baf',label:'AFAS'}
 ];
@@ -73,7 +73,7 @@ function badgeCls(v){
   if(u==='EMB'||u==='EMB.')return 'be';
   if(u.indexOf('F.EMB')===0)return 'bfe';
   if(u==='DES'||u==='DES.')return 'bde';
-  if(u.indexOf('DISP')===0)return 'bdi';
+  if(u.indexOf('FOLGA')===0)return 'bdi';
   if(u.indexOf('MOB')===0)return 'bmo';
   if(u.indexOf('AFAS')===0)return 'baf';
   if(u==='BASE'||u==='HOTEL'||u==='RECAP')return 'bba';

@@ -59,9 +59,9 @@ function getDatesInRange(from,to){
 function isPTO(u){
   if(!u)return false;
   if(u.indexOf('F.EMB')===0)return true;
-  if(u.indexOf('DISP')===0)return true;
+  if(u.indexOf('FOLGA')===0)return true;
   if(u==='BASE'||u==='HOTEL'||u==='RECAP')return true;
-  if(u.indexOf('FERIAS')===0||u.indexOf('FÉRIAS')===0||u.indexOf('Férias')===0||u==='FOLGA')return true;
+  if(u.indexOf('FERIAS')===0||u.indexOf('FÉRIAS')===0||u.indexOf('Férias')===0)return true;
   return false;
 }
 function generateReport(){

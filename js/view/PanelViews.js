@@ -12,10 +12,10 @@ function getCategory(u){
   if(u.indexOf('F.EMB')===0) return 'pto';
   if(u==='DES'||u==='DES.') return 'mob';
   if(u.indexOf('MOB')===0) return 'mob';
-  if(u.indexOf('DISP')===0) return 'pto';
+  if(u.indexOf('FOLGA')===0) return 'pto';
   if(u==='BASE'||u==='HOTEL'||u==='RECAP') return 'pto';
   if(u.indexOf('AFAS')===0) return null;
-  if(u.indexOf('FERIAS')===0||u.indexOf('FÉRIAS')===0||u.indexOf('Férias')===0||u==='FOLGA') return 'pto';
+  if(u.indexOf('FERIAS')===0||u.indexOf('FÉRIAS')===0||u.indexOf('Férias')===0) return 'pto';
   // treinamentos/cursos — lista configurável em Tipos de Treinamento (AppState.js)
   if(isTrainingStatus(u)) return 'trein';
   // everything else = project (plataformas, P-xx, PMXL, MV-xx, OCYAN, ENGIE, MISC, etc.)
@@ -402,11 +402,11 @@ function buildPie(){
   var idx=[];for(var i=dashS;i<=dashE;i++)idx.push(i);
   // Embarcado (EMB/EMB.) e Projeto são a mesma coisa (estar num projeto/plataforma é estar embarcado) — uma fatia só.
   var ct={EMBPROJ:0,FEMB:0,DES:0,DISP:0,MOB:0,AF:0,BASE:0};
-  TECS.forEach(function(t){idx.forEach(function(i){var v=t.d[i];if(!v)return;var u=v.trim().toUpperCase();if(u.indexOf('F.EMB')===0)ct.FEMB++;else if(u==='DES'||u==='DES.')ct.DES++;else if(u.indexOf('DISP')===0)ct.DISP++;else if(u.indexOf('MOB')===0)ct.MOB++;else if(u.indexOf('AFAS')===0)ct.AF++;else if(u==='BASE'||u==='HOTEL'||u==='RECAP')ct.BASE++;else if(u)ct.EMBPROJ++;});});
+  TECS.forEach(function(t){idx.forEach(function(i){var v=t.d[i];if(!v)return;var u=v.trim().toUpperCase();if(u.indexOf('F.EMB')===0)ct.FEMB++;else if(u==='DES'||u==='DES.')ct.DES++;else if(u.indexOf('FOLGA')===0)ct.DISP++;else if(u.indexOf('MOB')===0)ct.MOB++;else if(u.indexOf('AFAS')===0)ct.AF++;else if(u==='BASE'||u==='HOTEL'||u==='RECAP')ct.BASE++;else if(u)ct.EMBPROJ++;});});
   var total=Object.keys(ct).reduce(function(s,k){return s+ct[k];},0);
   if(pieChart){pieChart.destroy();pieChart=null;}
   pieChart=new Chart(document.getElementById('pieC'),{type:'doughnut',
-    data:{labels:['Embarcado/Projeto','Folga emb.','Desembarque','Disponível','Mobilização','Afastado','Base/Hotel'],
+    data:{labels:['Embarcado/Projeto','Folga emb.','Desembarque','FOLGA','Mobilização','Afastado','Base/Hotel'],
       datasets:[{data:[ct.EMBPROJ,ct.FEMB,ct.DES,ct.DISP,ct.MOB,ct.AF,ct.BASE],
         backgroundColor:['#2f4bd0','#1fc98e','#7dd3fc','#fb923c','#4a9eff','#e85b5b','#64748b'],borderWidth:0,hoverOffset:4}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'62%',
@@ -429,7 +429,7 @@ function buildLine(){
     // já que estar num projeto embarcado também é estar embarcado.
     emb.push(+(st.filter(function(v){return getCategory(v)==='proj';}).length/N*100).toFixed(1));
     femb.push(+(st.filter(function(v){return v.indexOf('F.EMB')===0;}).length/N*100).toFixed(1));
-    disp.push(+(st.filter(function(v){return v.indexOf('DISP')===0;}).length/N*100).toFixed(1));
+    disp.push(+(st.filter(function(v){return v.indexOf('FOLGA')===0;}).length/N*100).toFixed(1));
     todayM.push(i===T_IDX);
   }
   if(lineChart){lineChart.destroy();lineChart=null;}
@@ -438,7 +438,7 @@ function buildLine(){
       {label:'Embarcados',data:emb,borderColor:'#2f4bd0',backgroundColor:'rgba(47,75,208,.1)',tension:0.3,fill:true,borderWidth:2,
         pointRadius:todayM.map(function(t){return t?5:total>60?0:3;}),pointBackgroundColor:todayM.map(function(t){return t?'#fff':'#2f4bd0';})},
       {label:'Folga emb.',data:femb,borderColor:'#1fc98e',backgroundColor:'transparent',tension:0.3,fill:false,borderWidth:1.5,borderDash:[5,4],pointBackgroundColor:'#1fc98e',pointRadius:total>60?0:3},
-      {label:'Disponível',data:disp,borderColor:'#fb923c',backgroundColor:'transparent',tension:0.3,fill:false,borderWidth:1.5,borderDash:[2,3],pointBackgroundColor:'#fb923c',pointRadius:total>60?0:3}
+      {label:'FOLGA',data:disp,borderColor:'#fb923c',backgroundColor:'transparent',tension:0.3,fill:false,borderWidth:1.5,borderDash:[2,3],pointBackgroundColor:'#fb923c',pointRadius:total>60?0:3}
     ]},
     options:{responsive:true,maintainAspectRatio:false,
       scales:{
@@ -504,7 +504,7 @@ function renderProfList(){
 var _utilFrom='', _utilTo='', _utilFilter='todos';
 var _utilTrendChart=null, _utilDonutChart=null;
 
-var UTIL_LABELS={operacao:'Em Operação',folga_emb:'Folga Embarque',disponivel:'Disponível',
+var UTIL_LABELS={operacao:'Em Operação',folga_emb:'Folga Embarque',disponivel:'FOLGA',
   afastado:'Afastado',ferias:'Férias',treinamento:'Treinamento',
   mobilizacao:'Mobilização',cancelado:'Cancelado',embarque:'Embarcando',sem_info:'—'};
 var UTIL_COLORS={operacao:'#2ecc71',folga_emb:'#3498db',disponivel:'#f39c12',
@@ -513,7 +513,7 @@ var UTIL_COLORS={operacao:'#2ecc71',folga_emb:'#3498db',disponivel:'#f39c12',
 
 /* Standard statuses that are NOT a project */
 var UTIL_STD=['EMB','EMB.','F.EMB','F. EMB','F.EMBARQUE','FOLGA',
-  'DES','DES.','MOB.','MOB','DISP.','DISP','BASE','HOTEL','HOTEL.',
+  'DES','DES.','MOB.','MOB','BASE','HOTEL','HOTEL.',
   'RECAP','AFASTADO','INSS','ATESTADO','TREINAM.','TREINAMETO',
   'DESLIGADO','FÉRIAS','FERIAS','ASO','IRATA','T-HUET','THUET','NR','REGRA/OURO',
   'CURSO','HTT','PEAT','PT','NRS','NTS','HTS','JOTUN','CBSP',
@@ -528,11 +528,11 @@ function _util_isProject(s){
 function _util_classify(s){
   if(!s||s==='') return 'sem_info';
   var u=s.toUpperCase().trim();
-  if(u==='F.EMB'||u==='F. EMB'||u==='F.EMBARQUE'||u==='FOLGA') return 'folga_emb';
+  if(u==='F.EMB'||u==='F. EMB'||u==='F.EMBARQUE') return 'folga_emb';
   if(u.indexOf('FÉRIAS')>=0||u.indexOf('FERIAS')>=0) return 'ferias';
   if(['AFASTADO','INSS','ATESTADO'].some(function(x){return u.indexOf(x)>=0;})) return 'afastado';
   if(isTrainingStatus(u)||['CURSO','IRATA','TREINAM','CBSP','T-HUET','THUET','RESGATE','NRS','NTS','ASO','HTS','JOTUN','IBIRITÉ','IBIRITE','PEAT','NR','REGRA/OURO'].some(function(x){return u.indexOf(x)>=0;})) return 'treinamento';
-  if(['DISP','BASE','HOTEL','RECAP'].some(function(x){return u.indexOf(x)>=0;})) return 'disponivel';
+  if(['FOLGA','BASE','HOTEL','RECAP'].some(function(x){return u.indexOf(x)>=0;})) return 'disponivel';
   if(['MOB','MOBILIZ'].some(function(x){return u.indexOf(x)>=0;})) return 'mobilizacao';
   if(u==='DES'||u==='DES.'||u.indexOf('DESLIGADO')>=0) return 'cancelado';
   if(u==='EMB'||u==='EMB.') return 'embarque';
@@ -714,7 +714,7 @@ function _util_buildFilters(){
   var row=document.getElementById('filters'); if(!row) return;
   var cats=['todos','operacao','folga_emb','disponivel','afastado','treinamento','mobilizacao'];
   var labels={todos:'Todos',operacao:'Em Operação',folga_emb:'Folga Emb.',
-    disponivel:'Disponível',afastado:'Afastado',treinamento:'Treinamento',mobilizacao:'Mobilização'};
+    disponivel:'FOLGA',afastado:'Afastado',treinamento:'Treinamento',mobilizacao:'Mobilização'};
   row.innerHTML=cats.map(function(c){
     var act=c==='todos'?' active':'';
     return '<button class="filter-btn'+act+'" data-cat="'+c+'" onclick="_util_setFilter(this.dataset.cat,this)">'+labels[c]+'</button>';
