@@ -20,6 +20,17 @@ function hideLoginSplash(){
   document.getElementById('loginSplash').classList.remove('open');
 }
 
+function handleLoginSubmit(e){
+  e.preventDefault();
+  doLogin();
+  return false;
+}
+
+function toggleLoginPassVisibility(){
+  var input=document.getElementById('loginPass');
+  input.type = input.type==='password' ? 'text' : 'password';
+}
+
 async function doLogin(){
   var user=document.getElementById('loginUser').value.trim();
   var pass=document.getElementById('loginPass').value;
