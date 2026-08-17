@@ -83,6 +83,10 @@ td.day-cell.folga-preview{outline:2px dashed var(--st-femb);outline-offset:-2px}
 .chart-title{font-size:12px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:1rem;display:flex;align-items:center;gap:8px}
 .chart-title::before{content:'';width:3px;height:13px;background:var(--accent);border-radius:2px;flex-shrink:0}
 .hbar-list{display:flex;flex-direction:column;gap:6px;max-height:420px;overflow-y:auto;padding-right:4px}
+.subtab-group{display:flex;gap:4px;text-transform:none;letter-spacing:normal}
+.subtab-btn{background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:10px;color:var(--text2);cursor:pointer;transition:all .15s;font-family:'Inter',sans-serif;font-weight:500}
+.subtab-btn:hover{border-color:var(--accent);color:var(--accent)}
+.subtab-btn.active{background:var(--accent);color:#0f1117;border-color:var(--accent)}
 .hbar-list::-webkit-scrollbar{width:4px}.hbar-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
 .hbar-row{display:flex;align-items:center;gap:8px}
 .hbar-name{font-size:11px;color:var(--text2);width:140px;flex-shrink:0;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

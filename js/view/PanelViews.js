@@ -398,6 +398,49 @@ function buildBars(){
       +'<div style="font-size:10px;color:'+gcol+';font-family:JetBrains Mono,monospace;width:100px;text-align:right;flex-shrink:0">'+label+'</div></div>';
   }).join('');
 }
+function switchLoadTab(tab, btn){
+  document.querySelectorAll('.chart-card .subtab-btn').forEach(function(b){b.classList.remove('active');});
+  if(btn) btn.classList.add('active');
+  document.getElementById('bars').style.display = tab==='carga' ? '' : 'none';
+  document.getElementById('barsOvertime').style.display = tab==='extras' ? '' : 'none';
+}
+function _hhmmToDec(s){
+  if(!s) return 0;
+  var p=s.split(':');
+  return p.length===2 ? parseInt(p[0])+(parseInt(p[1])/60) : 0;
+}
+/* Horas extras = horas reais importadas (escala.hr_reais) acima da previsão do status do dia
+   (hrsForStatus), somadas no período do dashboard. Só considera dias com hora real importada —
+   sem isso não tem como saber se passou da previsão. */
+function buildOvertimeBars(){
+  var idx=[]; for(var i=dashS;i<=dashE;i++) idx.push(i);
+  var data=TECS.map(function(t){
+    var extra=0;
+    idx.forEach(function(i){
+      var realHr=t.hr[i];
+      if(!realHr) return;
+      var realDec=_hhmmToDec(realHr);
+      var prevDec=_hhmmToDec(hrsForStatus((t.d[i]||'').trim().toUpperCase()));
+      var diff=realDec-prevDec;
+      if(diff>0) extra+=diff;
+    });
+    return {n:t.n, extra:extra};
+  }).filter(function(d){return d.extra>0.01;}).sort(function(a,b){return b.extra-a.extra;});
+
+  var el=document.getElementById('barsOvertime');
+  if(!data.length){
+    el.innerHTML='<div style="padding:16px;text-align:center;color:var(--text3);font-size:12px">Nenhuma hora extra no período (precisa de horas reais importadas acima da previsão)</div>';
+    return;
+  }
+  var max=data[0].extra;
+  el.innerHTML=data.map(function(d){
+    var w=(d.extra/max*100).toFixed(1);
+    var nm=d.n.split(' ').slice(0,2).join(' ');
+    return '<div class="hbar-row"><div class="hbar-name" title="'+d.n+'">'+nm+'</div>'
+      +'<div class="hbar-track"><div class="hbar-fill" style="width:'+w+'%;background:#e85b5b"></div></div>'
+      +'<div class="hbar-pct">'+d.extra.toFixed(1)+'h</div></div>';
+  }).join('');
+}
 function buildPie(){
   var idx=[];for(var i=dashS;i<=dashE;i++)idx.push(i);
   // Embarcado (EMB/EMB.) e Projeto são a mesma coisa (estar num projeto/plataforma é estar embarcado) — uma fatia só.
@@ -449,7 +492,7 @@ function buildLine(){
     }
   });
 }
-function refreshDash(){buildMetrics();buildBars();buildPie();buildLine();}
+function refreshDash(){buildMetrics();buildBars();buildOvertimeBars();buildPie();buildLine();}
 function initDashDates(){
   var now=new Date();
   function fmt(d){return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();}
