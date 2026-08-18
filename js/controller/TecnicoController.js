@@ -17,7 +17,6 @@ async function confirmTec(){
   }
 
   var payload={nome:name,funcao:fn,sispat:sp,dias_folga:df,dias_trab:dt,lrs:lrs,lcr:lcr,irata:irata};
-  var pct=dt>0?+(dt/15).toFixed(4):0;
 
   try{
     if(_tecIdx===-1){
@@ -28,7 +27,7 @@ async function confirmTec(){
     }else{
       var t2=TECS[_tecIdx];
       await TecnicoModel.update(t2.id, payload);
-      Object.assign(t2,{n:name,f:fn,s:sp,df:df,dt:dt,p:pct,lrs:lrs,lcr:lcr,irata:irata});
+      Object.assign(t2,{n:name,f:fn,s:sp,df:df,dt:dt,lrs:lrs,lcr:lcr,irata:irata});
       toast('Técnico atualizado','#1fc98e');
     }
     closeTec();

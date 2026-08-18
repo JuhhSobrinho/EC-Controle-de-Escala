@@ -22,6 +22,21 @@ function getCategory(u){
   if(u.length>0) return 'proj';
   return null;
 }
+/* Carga (utilização) de um técnico num intervalo de dias: dias trabalhados (embarcado/projeto,
+   categoria 'proj') dividido por dias trabalhados + dias de folga (F.EMB ou FOLGA). Outros
+   status (DES, MOB, AFASTADO, BASE, HOTEL, RECAP, Férias, treinamento) não entram nem no
+   numerador nem no denominador — não fazem parte dessa conta de utilização/não-utilização. */
+function computeCarga(t, fromIdx, toIdx){
+  var worked=0, folga=0;
+  for(var i=fromIdx;i<=toIdx;i++){
+    var u=(t.d[i]||'').trim().toUpperCase();
+    if(!u) continue;
+    if(getCategory(u)==='proj') worked++;
+    else if(u.indexOf('F.EMB')===0||u.indexOf('FOLGA')===0) folga++;
+  }
+  var total=worked+folga;
+  return total>0 ? worked/total : 0;
+}
 function hrsForCat(cat){
   if(cat==='proj')  return 11;
   if(cat==='mob')   return 12;
@@ -363,19 +378,19 @@ function buildMetrics(){
   var idx=[];for(var i=dashS;i<=dashE;i++)idx.push(i);
   var valid=TECS.filter(function(t){return t.p>0;});
   var avg=valid.reduce(function(a,t){return a+t.p;},0)/valid.length*100;
-  var acima=TECS.filter(function(t){return t.p>1.15;}).length;
-  var abx=TECS.filter(function(t){return t.p<0.9&&t.p>0;}).length;
-  var ideal=TECS.filter(function(t){return t.p>=0.9&&t.p<=1.15;}).length;
+  var acima=TECS.filter(function(t){return t.p>0.55;}).length;
+  var abx=TECS.filter(function(t){return t.p<0.45&&t.p>0;}).length;
+  var ideal=TECS.filter(function(t){return t.p>=0.45&&t.p<=0.55;}).length;
   var avgEmb=idx.length?(idx.reduce(function(s,i){return s+TECS.filter(function(t){return ['EMB','EMB.'].indexOf((t.d[i]||'').toUpperCase())>=0;}).length;},0)/idx.length).toFixed(1):'—';
   var pk=0,pkD='—';
   idx.forEach(function(i){var c=TECS.filter(function(t){return ['EMB','EMB.'].indexOf((t.d[i]||'').toUpperCase())>=0;}).length;if(c>pk){pk=c;pkD=DATES[i];}});
   document.getElementById('rangeInfo').textContent=idx.length+' dia'+(idx.length!==1?'s':'');
   var cards=[
     {lb:'Total técnicos',val:TECS.length,nt:'cadastrados',ml:'#4a9eff'},
-    {lb:'Carga média',val:avg.toFixed(1)+'%',nt:'ideal = 100%',ml:avg>115?'#e85b5b':avg<90?'#f5a623':'#1fc98e'},
-    {lb:'Sobrecarregados',val:acima,nt:'> 115% carga',ml:'#e85b5b'},
-    {lb:'Faixa ideal',val:ideal,nt:'90% – 115%',ml:'#1fc98e'},
-    {lb:'Subutilizados',val:abx,nt:'< 90% carga',ml:'#f5a623'},
+    {lb:'Carga média',val:avg.toFixed(1)+'%',nt:'ideal = 50%',ml:avg>55?'#e85b5b':avg<45?'#f5a623':'#1fc98e'},
+    {lb:'Sobrecarregados',val:acima,nt:'> 55% carga',ml:'#e85b5b'},
+    {lb:'Faixa ideal',val:ideal,nt:'45% – 55%',ml:'#1fc98e'},
+    {lb:'Subutilizados',val:abx,nt:'< 45% carga',ml:'#f5a623'},
     {lb:'Média emb./dia',val:avgEmb,nt:'no período',ml:'#a78bfa'},
     {lb:'Pico de embarque',val:pk,nt:pkD,ml:'#1fc98e'}
   ];
@@ -384,13 +399,14 @@ function buildMetrics(){
   }).join('');
 }
 function buildBars(){
-  // Escala 0%–100%–200% de carga (t.p, o mesmo "Carga" usado no resto do app):
-  // 0% = muito mal utilizado, 100% = uso moderado (ideal), 200% = muito utilizado.
-  var data=TECS.map(function(t){ return {n:t.n,p:t.p}; }).sort(function(a,b){return b.p-a.p;});
+  // Carga aqui é a utilização real no período selecionado no Dashboard (dashS–dashE), não o
+  // valor "geral" de t.p (que cobre a janela visível da tabela). Ideal = 50% (equilíbrio entre
+  // dias trabalhados e dias de folga); os mesmos limiares (45%–55%) usados no resto do app.
+  var data=TECS.map(function(t){ return {n:t.n,p:computeCarga(t,dashS,dashE)}; }).sort(function(a,b){return b.p-a.p;});
   document.getElementById('bars').innerHTML=data.map(function(t){
-    var p=(t.p*100).toFixed(0), w=Math.min(t.p/2*100,100).toFixed(1);
+    var p=(t.p*100).toFixed(0), w=(t.p*100).toFixed(1);
     var gcol=pctCol(t.p);
-    var label = t.p>1.15?'Muito utilizado':t.p<0.9?'Muito mal utilizado':'Uso moderado';
+    var label = t.p>0.55?'Muito utilizado':t.p<0.45?'Muito mal utilizado':'Uso moderado';
     var nm=t.n.split(' ').slice(0,2).join(' ');
     return '<div class="hbar-row"><div class="hbar-name" title="'+t.n+' — '+label+'">'+nm+'</div>'
       +'<div class="hbar-track"><div class="hbar-fill" style="width:'+w+'%;background:'+gcol+'"></div></div>'
@@ -398,50 +414,204 @@ function buildBars(){
       +'<div style="font-size:10px;color:'+gcol+';font-family:JetBrains Mono,monospace;width:100px;text-align:right;flex-shrink:0">'+label+'</div></div>';
   }).join('');
 }
+var _loadTab='carga';
 function switchLoadTab(tab, btn){
-  document.querySelectorAll('.chart-card .subtab-btn').forEach(function(b){b.classList.remove('active');});
+  _loadTab=tab;
+  document.querySelectorAll('.chart-card .subtab-btn[data-tab]').forEach(function(b){b.classList.remove('active');});
   if(btn) btn.classList.add('active');
   document.getElementById('bars').style.display = tab==='carga' ? '' : 'none';
   document.getElementById('barsOvertime').style.display = tab==='extras' ? '' : 'none';
+  document.getElementById('overtimeFilterRow').style.display = tab==='extras' ? 'flex' : 'none';
+  if(tab!=='extras') _overtimeSelectedTi=null;
+  refreshStatusPie();
+  buildEmbarquePlaces();
+}
+/* Alterna qual gráfico aparece no card "Distribuição de status": o normal (por status do dia)
+   quando a aba ativa é "Carga", ou o de horas extras (50%/100%) quando é "Horas Extras" —
+   nesse segundo caso, clicar no nome de alguém na lista filtra o gráfico só pra essa pessoa. */
+function refreshStatusPie(){
+  if(_loadTab==='extras') buildOvertimePie(); else buildPie();
 }
 function _hhmmToDec(s){
   if(!s) return 0;
   var p=s.split(':');
   return p.length===2 ? parseInt(p[0])+(parseInt(p[1])/60) : 0;
 }
+var _overtimeFilter='total';
+function setOvertimeFilter(mode, btn){
+  _overtimeFilter=mode;
+  document.querySelectorAll('.subtab-btn[data-mode]').forEach(function(b){b.classList.remove('active');});
+  if(btn) btn.classList.add('active');
+  buildOvertimeBars();
+}
 /* Horas extras = horas reais importadas (escala.hr_reais) acima da previsão do status do dia
    (hrsForStatus), somadas no período do dashboard. Só considera dias com hora real importada —
-   sem isso não tem como saber se passou da previsão. */
+   sem isso não tem como saber se passou da previsão.
+   Split pela regra trabalhista: hora extra num dia normal (folga_override desligado) = 50%;
+   hora extra num dia marcado como "Dia de folga" (folga_override ligado — inclui F.EMB e, na
+   maioria dos casos, DES.) = 100%. */
+function _overtimeSplit(t, fromIdx, toIdx){
+  var extra50=0, extra100=0;
+  for(var i=fromIdx;i<=toIdx;i++){
+    var realHr=t.hr[i];
+    if(!realHr) continue;
+    var realDec=_hhmmToDec(realHr);
+    var prevDec=_hhmmToDec(hrsForStatus((t.d[i]||'').trim().toUpperCase()));
+    var diff=realDec-prevDec;
+    if(diff<=0) continue;
+    if(t.fo[i]) extra100+=diff; else extra50+=diff;
+  }
+  return {extra50:extra50, extra100:extra100, total:extra50+extra100};
+}
+var _overtimeSelectedTi=null; // ti clicado na lista de Horas Extras, ou null = todos os técnicos
+function selectOvertimeTec(ti){
+  _overtimeSelectedTi = (_overtimeSelectedTi===ti) ? null : ti; // clicar de novo no mesmo nome desmarca
+  buildOvertimeBars();
+  buildOvertimePie();
+  buildEmbarquePlaces();
+}
+/* Locais/projetos (embarcado ou plataforma — categoria 'proj') em que o técnico selecionado
+   ficou no período, com a contagem de dias em cada um. Só aparece com um técnico selecionado
+   na lista de Horas Extras — não faz sentido pra "todos os técnicos" de uma vez. */
+function _placesBreakdown(t, fromIdx, toIdx){
+  var counts={};
+  for(var i=fromIdx;i<=toIdx;i++){
+    var u=(t.d[i]||'').trim().toUpperCase();
+    if(u && getCategory(u)==='proj') counts[u]=(counts[u]||0)+1;
+  }
+  return Object.keys(counts).map(function(k){return {place:k, days:counts[k]};}).sort(function(a,b){return b.days-a.days;});
+}
+function buildEmbarquePlaces(){
+  var el=document.getElementById('embarquePlaces');
+  if(_overtimeSelectedTi===null || _loadTab!=='extras'){ el.style.display='none'; el.innerHTML=''; return; }
+  var t=TECS[_overtimeSelectedTi];
+  var places=_placesBreakdown(t, dashS, dashE);
+  el.style.display='block';
+  var header='<div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Locais embarcado no período — '+t.n.split(' ').slice(0,2).join(' ')+'</div>';
+  if(!places.length){
+    el.innerHTML=header+'<div style="font-size:12px;color:var(--text3)">Nenhum dia embarcado/projeto no período</div>';
+    return;
+  }
+  var max=places[0].days;
+  el.innerHTML=header+places.map(function(p){
+    var w=(p.days/max*100).toFixed(1);
+    return '<div class="hbar-row"><div class="hbar-name">'+p.place+'</div>'
+      +'<div class="hbar-track"><div class="hbar-fill" style="width:'+w+'%;background:#2f4bd0"></div></div>'
+      +'<div class="hbar-pct">'+p.days+' dia'+(p.days!==1?'s':'')+'</div></div>';
+  }).join('');
+}
 function buildOvertimeBars(){
-  var idx=[]; for(var i=dashS;i<=dashE;i++) idx.push(i);
-  var data=TECS.map(function(t){
-    var extra=0;
-    idx.forEach(function(i){
-      var realHr=t.hr[i];
-      if(!realHr) return;
-      var realDec=_hhmmToDec(realHr);
-      var prevDec=_hhmmToDec(hrsForStatus((t.d[i]||'').trim().toUpperCase()));
-      var diff=realDec-prevDec;
-      if(diff>0) extra+=diff;
-    });
-    return {n:t.n, extra:extra};
+  var data=TECS.map(function(t,ti){
+    var s=_overtimeSplit(t, dashS, dashE);
+    var val = _overtimeFilter==='50' ? s.extra50 : _overtimeFilter==='100' ? s.extra100 : s.total;
+    return {ti:ti, n:t.n, extra:val};
   }).filter(function(d){return d.extra>0.01;}).sort(function(a,b){return b.extra-a.extra;});
 
   var el=document.getElementById('barsOvertime');
   if(!data.length){
-    el.innerHTML='<div style="padding:16px;text-align:center;color:var(--text3);font-size:12px">Nenhuma hora extra no período (precisa de horas reais importadas acima da previsão)</div>';
+    var emptyMsg = _overtimeFilter==='50' ? 'Nenhuma hora extra de 50% no período'
+      : _overtimeFilter==='100' ? 'Nenhuma hora extra de 100% no período'
+      : 'Nenhuma hora extra no período (precisa de horas reais importadas acima da previsão)';
+    el.innerHTML='<div style="padding:16px;text-align:center;color:var(--text3);font-size:12px">'+emptyMsg+'</div>';
     return;
   }
   var max=data[0].extra;
   el.innerHTML=data.map(function(d){
     var w=(d.extra/max*100).toFixed(1);
     var nm=d.n.split(' ').slice(0,2).join(' ');
-    return '<div class="hbar-row"><div class="hbar-name" title="'+d.n+'">'+nm+'</div>'
+    var sel=_overtimeSelectedTi===d.ti?' selected':'';
+    return '<div class="hbar-row'+sel+'"><div class="hbar-name" title="Filtrar o gráfico por '+d.n+'" onclick="selectOvertimeTec('+d.ti+')" style="cursor:pointer">'+nm+'</div>'
       +'<div class="hbar-track"><div class="hbar-fill" style="width:'+w+'%;background:#e85b5b"></div></div>'
-      +'<div class="hbar-pct">'+d.extra.toFixed(1)+'h</div></div>';
+      +'<div class="hbar-pct">'+fmtHrs(d.extra)+'</div></div>';
   }).join('');
 }
+function buildOvertimePie(){
+  var titleEl=document.getElementById('pieTitle');
+  var canvasEl=document.getElementById('pieC'), msgEl=document.getElementById('pieEmptyMsg');
+  if(pieChart){pieChart.destroy();pieChart=null;}
+
+  // com um técnico selecionado: um gráfico de barras, uma barra por dia embarcado/projeto no
+  // período (não é mais o total agregado) — dá pra ver dia a dia qual teve hora extra ou não,
+  // com uma linha guia na altura da previsão do dia (normalmente 11h pra embarcado/projeto).
+  if(_overtimeSelectedTi!==null){
+    var t=TECS[_overtimeSelectedTi];
+    if(titleEl) titleEl.textContent='Horas por dia embarcado — '+t.n.split(' ').slice(0,2).join(' ');
+    var labels=[], values=[], colors=[], guide=[];
+    for(var i=dashS;i<=dashE;i++){
+      var u=(t.d[i]||'').trim().toUpperCase();
+      if(!u||getCategory(u)!=='proj') continue;
+      var dp=DATES[i].split('/');
+      var prevDec=_hhmmToDec(hrsForStatus(u));
+      var realHr=t.hr[i];
+      var realDec = realHr ? _hhmmToDec(realHr) : prevDec; // sem hora real importada, mostra a previsão
+      labels.push(dp[0]+'/'+dp[1]);
+      values.push(+realDec.toFixed(2));
+      guide.push(prevDec);
+      var diff = realHr ? (realDec-prevDec) : 0;
+      colors.push(diff>0.01 ? (t.fo[i]?'#e85b5b':'#f5a623') : '#2f4bd0');
+    }
+    if(!labels.length){
+      canvasEl.style.display='none';
+      msgEl.style.display='flex';
+      msgEl.textContent='Nenhum dia embarcado/projeto desse técnico no período';
+      return;
+    }
+    canvasEl.style.display='';
+    msgEl.style.display='none';
+    pieChart=new Chart(canvasEl,{
+      data:{labels:labels, datasets:[
+        {type:'bar', label:'Horas trabalhadas', data:values, backgroundColor:colors, borderRadius:3, order:2, barPercentage:0.7},
+        {type:'line', label:'Previsto', data:guide, borderColor:'#8a91a8', borderDash:[5,4], borderWidth:1.5, pointRadius:0, fill:false, order:1}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,
+        scales:{
+          x:{ticks:{color:'#8a91a8',font:{size:9},maxRotation:0,autoSkip:true}, grid:{display:false}},
+          y:{ticks:{color:'#8a91a8',font:{size:10}}, grid:{color:'rgba(255,255,255,.05)'}, beginAtZero:true}
+        },
+        plugins:{
+          legend:{display:false},
+          tooltip:{callbacks:{label:function(ctx){
+            return (ctx.dataset.type==='line'?'Previsto: ':'Trabalhado: ')+fmtHrs(ctx.parsed.y);
+          }}}
+        }
+      }
+    });
+    return;
+  }
+
+  var tot50=0, tot100=0;
+  TECS.forEach(function(t){
+    var s=_overtimeSplit(t, dashS, dashE);
+    tot50+=s.extra50; tot100+=s.extra100;
+  });
+  var total=tot50+tot100;
+  if(titleEl) titleEl.textContent='Horas extras — todos os técnicos';
+  if(total<=0.01){
+    canvasEl.style.display='none';
+    msgEl.style.display='flex';
+    msgEl.textContent='Nenhuma hora extra no período';
+    return;
+  }
+  canvasEl.style.display='';
+  msgEl.style.display='none';
+  pieChart=new Chart(canvasEl,{type:'doughnut',
+    data:{labels:['Hora extra 50%','Hora extra 100%'],
+      datasets:[{data:[+tot50.toFixed(2),+tot100.toFixed(2)],backgroundColor:['#f5a623','#e85b5b'],borderWidth:0,hoverOffset:4}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'62%',
+      plugins:{legend:{position:'right',labels:{color:'#8a91a8',font:{size:11,family:'Inter'},boxWidth:10,padding:10,
+        generateLabels:function(ch){var ds=ch.data.datasets[0];return ch.data.labels.map(function(l,i){
+          var v=ds.data[i], pct=total>0?Math.round(v/total*100):0;
+          return {text:l+'  '+fmtHrs(v)+' ('+pct+'%)',fillStyle:ds.backgroundColor[i],strokeStyle:'transparent',fontColor:'#8a91a8',index:i};
+        });}}},
+        tooltip:{callbacks:{label:function(ctx){return ctx.label+': '+fmtHrs(ctx.parsed);}}}}
+    }
+  });
+}
 function buildPie(){
+  var titleEl=document.getElementById('pieTitle');
+  if(titleEl) titleEl.textContent='Distribuição de status';
+  document.getElementById('pieC').style.display='';
+  document.getElementById('pieEmptyMsg').style.display='none';
   var idx=[];for(var i=dashS;i<=dashE;i++)idx.push(i);
   // Embarcado (EMB/EMB.) e Projeto são a mesma coisa (estar num projeto/plataforma é estar embarcado) — uma fatia só.
   var ct={EMBPROJ:0,FEMB:0,DES:0,DISP:0,MOB:0,AF:0,BASE:0};
@@ -492,7 +662,7 @@ function buildLine(){
     }
   });
 }
-function refreshDash(){buildMetrics();buildBars();buildOvertimeBars();buildPie();buildLine();}
+function refreshDash(){buildMetrics();buildBars();buildOvertimeBars();refreshStatusPie();buildEmbarquePlaces();buildLine();}
 function initDashDates(){
   var now=new Date();
   function fmt(d){return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();}

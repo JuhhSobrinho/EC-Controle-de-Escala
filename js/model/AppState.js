@@ -66,7 +66,7 @@ function isWeekend(dmy){var p=dmy.split('/');var d=new Date(+p[2],+p[1]-1,+p[0])
 function toISO(dmy){var p=dmy.split('/');return p[2]+'-'+p[1]+'-'+p[0];}
 function fromISO(iso){if(!iso)return '';var p=iso.split('-');return p[2]+'/'+p[1]+'/'+p[0];}
 function idxOf(dmy){var i=DATES.indexOf(dmy);return i===-1?null:i;}
-function pctCol(p){return p>1.15?'#e85b5b':p<0.9&&p>0?'#f5a623':p===0?'#555e7a':'#1fc98e';}
+function pctCol(p){return p>0.55?'#e85b5b':p<0.45&&p>0?'#f5a623':p===0?'#555e7a':'#1fc98e';}
 function badgeCls(v){
   if(!v)return '';
   var u=v.trim().toUpperCase();
@@ -89,7 +89,7 @@ var AppState = {
     var dt = r.dias_trab || 0;
     return {
       id: r.id, n: r.nome, f: r.funcao, s: r.sispat, df: r.dias_folga || 0, dt: dt,
-      p: dt>0 ? +(dt/15).toFixed(4) : 0,
+      p: 0, // Carga real (utilização) — recalculada em buildTable() a partir da escala, ver computeCarga()
       lrs: r.lrs, lcr: r.lcr, irata: r.irata,
       d: new Array(DATES.length).fill(''),
       fo: new Array(DATES.length).fill(0),

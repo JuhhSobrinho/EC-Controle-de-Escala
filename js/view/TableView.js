@@ -30,13 +30,17 @@ function hrsColor(u){
 
 function buildTable(){
   var ws=Math.max(0,winStart), we=Math.min(DATES.length-1,winStart+WIN*2);
+  // Carga (t.p) = utilização real na janela de dias VISÍVEL na tela (mesma ws–we usada pra
+  // desenhar as colunas) — não a escala inteira de ~2 anos. Assim o número bate com o que dá
+  // pra contar "de olho" olhando a tabela, em vez de incluir meses de histórico fora de vista.
+  TECS.forEach(function(t){ t.p=computeCarga(t, ws, we); });
   var wp=DATES[ws].split('/'), ep=DATES[we].split('/');
   document.getElementById('winLabel').textContent=wp[0]+'/'+wp[1]+' – '+ep[0]+'/'+ep[1];
   var rows=TECS.slice();
   if(search)rows=rows.filter(function(t){return t.n.toLowerCase().indexOf(search)>=0||t.f.toLowerCase().indexOf(search)>=0;});
-  if(activeF==='over')rows=rows.filter(function(t){return t.p>1.15;});
-  if(activeF==='under')rows=rows.filter(function(t){return t.p<0.9&&t.p>0;});
-  if(activeF==='ideal')rows=rows.filter(function(t){return t.p>=0.9&&t.p<=1.15;});
+  if(activeF==='over')rows=rows.filter(function(t){return t.p>0.55;});
+  if(activeF==='under')rows=rows.filter(function(t){return t.p<0.45&&t.p>0;});
+  if(activeF==='ideal')rows=rows.filter(function(t){return t.p>=0.45&&t.p<=0.55;});
   var h='<thead><tr>';
   h+='<th class="fx th-info" style="min-width:215px">Nome</th>';
   for(var i=ws;i<=we;i++){

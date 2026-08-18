@@ -153,10 +153,15 @@
           <button class="subtab-btn" data-tab="extras" onclick="switchLoadTab('extras',this)">Horas Extras</button>
         </span>
       </div>
+      <div class="subtab-group" id="overtimeFilterRow" style="display:none;justify-content:flex-end;margin-bottom:8px">
+        <button class="subtab-btn active" data-mode="total" onclick="setOvertimeFilter('total',this)">Total</button>
+        <button class="subtab-btn" data-mode="50" onclick="setOvertimeFilter('50',this)">50%</button>
+        <button class="subtab-btn" data-mode="100" onclick="setOvertimeFilter('100',this)">100%</button>
+      </div>
       <div class="hbar-list" id="bars"></div>
       <div class="hbar-list" id="barsOvertime" style="display:none"></div>
     </div>
-    <div class="chart-card"><div class="chart-title">Distribuição de status</div><div style="position:relative;height:300px"><canvas id="pieC"></canvas></div></div>
+    <div class="chart-card"><div class="chart-title"><span id="pieTitle">Distribuição de status</span></div><div style="position:relative;height:300px" id="pieWrap"><canvas id="pieC"></canvas><div id="pieEmptyMsg" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:var(--text3);font-size:12px;text-align:center;padding:0 24px"></div></div><div id="embarquePlaces" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:10px"></div></div>
   </div>
   <div class="dash-grid full">
     <div class="chart-card"><div class="chart-title">Ocupação no período</div><div style="position:relative;height:210px"><canvas id="lineC"></canvas></div></div>
