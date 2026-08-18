@@ -444,22 +444,26 @@ function setOvertimeFilter(mode, btn){
   if(btn) btn.classList.add('active');
   buildOvertimeBars();
 }
-/* Horas extras = horas reais importadas (escala.hr_reais) acima da previsão do status do dia
-   (hrsForStatus), somadas no período do dashboard. Só considera dias com hora real importada —
-   sem isso não tem como saber se passou da previsão.
-   Split pela regra trabalhista: hora extra num dia normal (folga_override desligado) = 50%;
-   hora extra num dia marcado como "Dia de folga" (folga_override ligado — inclui F.EMB e, na
-   maioria dos casos, DES.) = 100%. */
+/* Horas extras, somadas no período do dashboard. Só considera dias com hora real importada.
+   Split pela regra trabalhista:
+   - dia normal (folga_override desligado): só o EXCEDENTE sobre a previsão (hrsForStatus)
+     conta como hora extra, a 50% — ex. previsto 11:00, trabalhou 11:30 → 0:30 extra.
+   - dia marcado como "Dia de folga" (folga_override ligado — inclui F.EMB e, na maioria dos
+     casos, DES.): conta TODA hora trabalhada nesse dia a 100%, não só o excedente — não tem
+     "previsão normal" num dia de folga, então qualquer hora ali já é extra por inteiro. */
 function _overtimeSplit(t, fromIdx, toIdx){
   var extra50=0, extra100=0;
   for(var i=fromIdx;i<=toIdx;i++){
     var realHr=t.hr[i];
     if(!realHr) continue;
     var realDec=_hhmmToDec(realHr);
+    if(t.fo[i]){
+      if(realDec>0.01) extra100+=realDec;
+      continue;
+    }
     var prevDec=_hhmmToDec(hrsForStatus((t.d[i]||'').trim().toUpperCase()));
     var diff=realDec-prevDec;
-    if(diff<=0) continue;
-    if(t.fo[i]) extra100+=diff; else extra50+=diff;
+    if(diff>0.01) extra50+=diff;
   }
   return {extra50:extra50, extra100:extra100, total:extra50+extra100};
 }
@@ -471,15 +475,21 @@ function selectOvertimeTec(ti){
   buildEmbarquePlaces();
 }
 /* Locais/projetos (embarcado ou plataforma — categoria 'proj') em que o técnico selecionado
-   ficou no período, com a contagem de dias em cada um. Só aparece com um técnico selecionado
-   na lista de Horas Extras — não faz sentido pra "todos os técnicos" de uma vez. */
+   ficou no período — um bloco por sequência CONTÍNUA no mesmo local (não soma tudo junto),
+   com o período exato (de/até) e a contagem de dias. Se ele voltou pro mesmo local em outra
+   leva depois, aparece como um segundo bloco separado, com seu próprio período. Só aparece
+   com um técnico selecionado na lista de Horas Extras. */
 function _placesBreakdown(t, fromIdx, toIdx){
-  var counts={};
-  for(var i=fromIdx;i<=toIdx;i++){
-    var u=(t.d[i]||'').trim().toUpperCase();
-    if(u && getCategory(u)==='proj') counts[u]=(counts[u]||0)+1;
+  var blocks=[], curPlace=null, curStart=null;
+  for(var i=fromIdx; i<=toIdx+1; i++){
+    var u = i<=toIdx ? (t.d[i]||'').trim().toUpperCase() : '';
+    var place = (u && getCategory(u)==='proj') ? u : null;
+    if(place!==curPlace){
+      if(curPlace!==null) blocks.push({place:curPlace, fromIdx:curStart, toIdx:i-1, days:i-curStart});
+      curPlace=place; curStart=i;
+    }
   }
-  return Object.keys(counts).map(function(k){return {place:k, days:counts[k]};}).sort(function(a,b){return b.days-a.days;});
+  return blocks.sort(function(a,b){return a.fromIdx-b.fromIdx;});
 }
 function buildEmbarquePlaces(){
   var el=document.getElementById('embarquePlaces');
@@ -492,12 +502,14 @@ function buildEmbarquePlaces(){
     el.innerHTML=header+'<div style="font-size:12px;color:var(--text3)">Nenhum dia embarcado/projeto no período</div>';
     return;
   }
-  var max=places[0].days;
+  var max=Math.max.apply(null, places.map(function(p){return p.days;}));
   el.innerHTML=header+places.map(function(p){
     var w=(p.days/max*100).toFixed(1);
+    var fromDp=DATES[p.fromIdx].split('/'), toDp=DATES[p.toIdx].split('/');
+    var range = p.fromIdx===p.toIdx ? fromDp[0]+'/'+fromDp[1] : fromDp[0]+'/'+fromDp[1]+' – '+toDp[0]+'/'+toDp[1];
     return '<div class="hbar-row"><div class="hbar-name">'+p.place+'</div>'
       +'<div class="hbar-track"><div class="hbar-fill" style="width:'+w+'%;background:#2f4bd0"></div></div>'
-      +'<div class="hbar-pct">'+p.days+' dia'+(p.days!==1?'s':'')+'</div></div>';
+      +'<div class="hbar-pct" style="width:auto;white-space:nowrap">'+range+' · '+p.days+' dia'+(p.days!==1?'s':'')+'</div></div>';
   }).join('');
 }
 function buildOvertimeBars(){
@@ -516,12 +528,13 @@ function buildOvertimeBars(){
     return;
   }
   var max=data[0].extra;
+  var barColor = _overtimeFilter==='50' ? '#eab308' : '#e85b5b'; // 50%=amarelo, 100%/total=vermelho
   el.innerHTML=data.map(function(d){
     var w=(d.extra/max*100).toFixed(1);
     var nm=d.n.split(' ').slice(0,2).join(' ');
     var sel=_overtimeSelectedTi===d.ti?' selected':'';
     return '<div class="hbar-row'+sel+'"><div class="hbar-name" title="Filtrar o gráfico por '+d.n+'" onclick="selectOvertimeTec('+d.ti+')" style="cursor:pointer">'+nm+'</div>'
-      +'<div class="hbar-track"><div class="hbar-fill" style="width:'+w+'%;background:#e85b5b"></div></div>'
+      +'<div class="hbar-track"><div class="hbar-fill" style="width:'+w+'%;background:'+barColor+'"></div></div>'
       +'<div class="hbar-pct">'+fmtHrs(d.extra)+'</div></div>';
   }).join('');
 }
@@ -530,30 +543,40 @@ function buildOvertimePie(){
   var canvasEl=document.getElementById('pieC'), msgEl=document.getElementById('pieEmptyMsg');
   if(pieChart){pieChart.destroy();pieChart=null;}
 
-  // com um técnico selecionado: um gráfico de barras, uma barra por dia embarcado/projeto no
-  // período (não é mais o total agregado) — dá pra ver dia a dia qual teve hora extra ou não,
-  // com uma linha guia na altura da previsão do dia (normalmente 11h pra embarcado/projeto).
+  // com um técnico selecionado: um gráfico de barras, uma barra por dia com previsão de horas
+  // definida no período (embarcado/projeto, BASE/HOTEL, DES., MOB., F.EMB — cada um com seu
+  // próprio limite via hrsForStatus, ex. BASE são 8h e não 11h) — dá pra ver dia a dia qual
+  // teve hora extra ou não, com uma linha guia na altura da previsão daquele dia específico.
   if(_overtimeSelectedTi!==null){
     var t=TECS[_overtimeSelectedTi];
-    if(titleEl) titleEl.textContent='Horas por dia embarcado — '+t.n.split(' ').slice(0,2).join(' ');
+    if(titleEl) titleEl.textContent='Horas por dia — '+t.n.split(' ').slice(0,2).join(' ');
     var labels=[], values=[], colors=[], guide=[];
     for(var i=dashS;i<=dashE;i++){
       var u=(t.d[i]||'').trim().toUpperCase();
-      if(!u||getCategory(u)!=='proj') continue;
+      if(!u) continue;
+      var prevStr=hrsForStatus(u);
+      if(!prevStr) continue; // ex: AFASTADO, sem previsão de horas definida
       var dp=DATES[i].split('/');
-      var prevDec=_hhmmToDec(hrsForStatus(u));
+      var prevDec=_hhmmToDec(prevStr);
       var realHr=t.hr[i];
       var realDec = realHr ? _hhmmToDec(realHr) : prevDec; // sem hora real importada, mostra a previsão
       labels.push(dp[0]+'/'+dp[1]);
       values.push(+realDec.toFixed(2));
       guide.push(prevDec);
-      var diff = realHr ? (realDec-prevDec) : 0;
-      colors.push(diff>0.01 ? (t.fo[i]?'#e85b5b':'#f5a623') : '#2f4bd0');
+      // dia de folga: QUALQUER hora trabalhada é extra a 100%, não só o excedente sobre a previsão
+      var worked = realHr && realDec>0.01;
+      var isRestStatus = u.indexOf('F.EMB')===0 || u.indexOf('FOLGA')===0;
+      var isOvertime = worked && (t.fo[i] ? true : (realDec-prevDec)>0.01);
+      var color;
+      if(isOvertime) color = t.fo[i] ? '#e85b5b' : '#eab308';
+      else if(!worked && isRestStatus) color = '#64748b'; // folga de fato (não trabalhou) — cinza, diferente do azul de dia trabalhado
+      else color = '#2f4bd0';
+      colors.push(color);
     }
     if(!labels.length){
       canvasEl.style.display='none';
       msgEl.style.display='flex';
-      msgEl.textContent='Nenhum dia embarcado/projeto desse técnico no período';
+      msgEl.textContent='Nenhum dia com previsão de horas desse técnico no período';
       return;
     }
     canvasEl.style.display='';
@@ -596,7 +619,7 @@ function buildOvertimePie(){
   msgEl.style.display='none';
   pieChart=new Chart(canvasEl,{type:'doughnut',
     data:{labels:['Hora extra 50%','Hora extra 100%'],
-      datasets:[{data:[+tot50.toFixed(2),+tot100.toFixed(2)],backgroundColor:['#f5a623','#e85b5b'],borderWidth:0,hoverOffset:4}]},
+      datasets:[{data:[+tot50.toFixed(2),+tot100.toFixed(2)],backgroundColor:['#eab308','#e85b5b'],borderWidth:0,hoverOffset:4}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'62%',
       plugins:{legend:{position:'right',labels:{color:'#8a91a8',font:{size:11,family:'Inter'},boxWidth:10,padding:10,
         generateLabels:function(ch){var ds=ch.data.datasets[0];return ch.data.labels.map(function(l,i){

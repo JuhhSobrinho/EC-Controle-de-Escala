@@ -75,17 +75,14 @@ function toggleTheme(){
 
 document.getElementById('hDate').textContent=new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'});
 
-// arrow key horizontal scroll on table
+// setas do teclado ← → fazem a mesma coisa que os botões ‹ › (−7/+7 dias) da tabela principal
 (function(){
-  var STEP=120;
   document.addEventListener('keydown',function(e){
-    var outer=document.querySelector('.tbl-outer');
-    if(!outer) return;
-    // only when no input/modal is focused
+    // só quando nenhum input/modal está em foco
     var tag=document.activeElement&&document.activeElement.tagName;
     if(tag==='INPUT'||tag==='SELECT'||tag==='TEXTAREA') return;
     if(document.querySelector('.overlay.open')) return;
-    if(e.key==='ArrowLeft'){outer.scrollLeft-=STEP;e.preventDefault();}
-    else if(e.key==='ArrowRight'){outer.scrollLeft+=STEP;e.preventDefault();}
+    if(e.key==='ArrowLeft'){shift(-7);e.preventDefault();}
+    else if(e.key==='ArrowRight'){shift(7);e.preventDefault();}
   });
 })();
