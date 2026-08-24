@@ -144,9 +144,13 @@ tbody tr:last-child td{border-bottom:none}
 .func-tag{font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace}
 td.edited{outline:2px solid rgba(167,139,250,.55);outline-offset:-2px;z-index:1}
 td.day-cell{cursor:pointer;transition:filter .1s;position:relative}
-/* indicador de observação (obs) no dia, tipo a "notinha" do Excel: triângulo vermelho no canto */
+/* indicador de observação (obs) no dia, tipo a "notinha" do Excel: triângulo vermelho no canto —
+   com uma borda branca por trás pra continuar visível mesmo em cima de células já vermelhas
+   (FÉRIAS/AFASTADO) ou de qualquer outra cor de status. */
+td.day-cell.has-obs::before{content:'';position:absolute;top:0;right:0;width:0;height:0;
+  border-style:solid;border-width:0 12px 12px 0;border-color:transparent #fff transparent transparent;pointer-events:none;z-index:1}
 td.day-cell.has-obs::after{content:'';position:absolute;top:0;right:0;width:0;height:0;
-  border-style:solid;border-width:0 7px 7px 0;border-color:transparent #e85b5b transparent transparent;pointer-events:none}
+  border-style:solid;border-width:0 10px 10px 0;border-color:transparent #e85b5b transparent transparent;pointer-events:none;z-index:2}
 td.day-cell:hover{filter:brightness(1.12)}
 td.day-cell.drag-origin{outline:2px solid var(--accent);outline-offset:-2px;z-index:1}
 td.day-cell.drag-preview{background:rgba(31,201,142,.18) !important;outline:1px dashed var(--accent);outline-offset:-1px}

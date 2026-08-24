@@ -16,9 +16,38 @@ function dfStart(e, ti, di){
 
 function dfOver(e, ti, di){
   if(window.folgaMode){ ffOver(e, ti, di); return; }
-  if(!_df || _df.ti !== ti) return;
+  if(!_df || _df.ti !== ti){
+    showDayHoverInfo(e, ti, di); // não tá arrastando: só mostra a info do dia sob o mouse
+    return;
+  }
   _df.diEnd = di;
   dfHighlight(e);
+}
+
+/* Passando o mouse (sem arrastar) por um dia que faz parte de uma sequência (2+ dias seguidos),
+   mostra quantos dias são — ex. "5 F.EMB" pra uma sequência de folga embarque, ou "6 dias
+   consecutivos" pra um bloco embarcado/projeto (conta como uma coisa só mesmo trocando de
+   código de projeto no meio, já que EMB + qualquer projeto conta como "embarcado" no resto
+   do app). Dias isolados (sequência de 1) não mostram nada, pra não poluir a tela à toa. */
+function _consecutiveRun(t, di){
+  var u=(t.d[di]||'').trim().toUpperCase();
+  if(!u) return null;
+  var isProj = getCategory(u)==='proj';
+  var matches = isProj
+    ? function(x){ return getCategory((x||'').trim().toUpperCase())==='proj'; }
+    : function(x){ return (x||'').trim().toUpperCase()===u; };
+  var from=di, to=di;
+  while(from>0 && matches(t.d[from-1])) from--;
+  while(to<DATES.length-1 && matches(t.d[to+1])) to++;
+  return {from:from, to:to, count:to-from+1, isProj:isProj, label:u};
+}
+function showDayHoverInfo(e, ti, di){
+  var run=_consecutiveRun(TECS[ti], di);
+  if(!run || run.count<2){ hideDragCountBadge(); return; }
+  var text = run.isProj
+    ? (run.count+' dias consecutivos')
+    : (run.count+' dia'+(run.count!==1?'s':'')+' de '+run.label);
+  showInfoBadge(text, e.clientX, e.clientY);
 }
 
 function dfEnd(e, ti, di){
@@ -67,15 +96,18 @@ function dfClear(){
   hideDragCountBadge();
 }
 
-/* contador flutuante de "N células selecionadas" durante o arrasto — usado tanto pelo
-   arrasto normal de status (aqui) quanto pelo modo "Marcar folga" (FolgaToggleController). */
-function showDragCountBadge(count, x, y){
+/* badge flutuante genérico perto do cursor — usado pro contador de células em arrasto
+   (aqui e no modo "Marcar folga") e pra info de sequência de dias ao passar o mouse. */
+function showInfoBadge(text, x, y){
   var el = document.getElementById('dragCountBadge');
   if(!el) return;
-  el.textContent = count+' célula'+(count!==1?'s':'')+' selecionada'+(count!==1?'s':'');
+  el.textContent = text;
   el.style.left = (x+14)+'px';
   el.style.top = (y+14)+'px';
   el.classList.add('show');
+}
+function showDragCountBadge(count, x, y){
+  showInfoBadge(count+' célula'+(count!==1?'s':'')+' selecionada'+(count!==1?'s':''), x, y);
 }
 function hideDragCountBadge(){
   var el = document.getElementById('dragCountBadge');
@@ -200,3 +232,8 @@ document.addEventListener('mouseup', function(e){
   }
 });
 document.addEventListener('mouseleave', function(){ dfClear(); if(window.folgaMode) ffClear(); });
+// esconde o badge de info de sequência quando o mouse sai da tabela inteira (não só troca de célula)
+(function(){
+  var outer=document.querySelector('.tbl-outer');
+  if(outer) outer.addEventListener('mouseleave', function(){ if(!_df && !window.folgaMode) hideDragCountBadge(); });
+})();
