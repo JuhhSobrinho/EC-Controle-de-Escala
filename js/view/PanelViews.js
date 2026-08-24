@@ -398,17 +398,24 @@ function buildMetrics(){
     return '<div class="metric-card" style="--ml:'+c.ml+'"><div class="metric-label">'+c.lb+'</div><div class="metric-value" style="color:'+c.ml+'">'+c.val+'</div><div class="metric-note">'+c.nt+'</div></div>';
   }).join('');
 }
+var _cargaSelectedTi=null; // ti clicado na lista de Carga, ou null = todos os técnicos (filtra a Distribuição de status)
+function selectCargaTec(ti){
+  _cargaSelectedTi = (_cargaSelectedTi===ti) ? null : ti; // clicar de novo no mesmo nome desmarca
+  buildBars();
+  buildPie();
+}
 function buildBars(){
   // Carga aqui é a utilização real no período selecionado no Dashboard (dashS–dashE), não o
   // valor "geral" de t.p (que cobre a janela visível da tabela). Ideal = 50% (equilíbrio entre
   // dias trabalhados e dias de folga); os mesmos limiares (45%–55%) usados no resto do app.
-  var data=TECS.map(function(t){ return {n:t.n,p:computeCarga(t,dashS,dashE)}; }).sort(function(a,b){return b.p-a.p;});
+  var data=TECS.map(function(t,ti){ return {ti:ti,n:t.n,p:computeCarga(t,dashS,dashE)}; }).sort(function(a,b){return b.p-a.p;});
   document.getElementById('bars').innerHTML=data.map(function(t){
     var p=(t.p*100).toFixed(0), w=(t.p*100).toFixed(1);
     var gcol=pctCol(t.p);
     var label = t.p>0.55?'Muito utilizado':t.p<0.45?'Muito mal utilizado':'Uso moderado';
     var nm=t.n.split(' ').slice(0,2).join(' ');
-    return '<div class="hbar-row"><div class="hbar-name" title="'+t.n+' — '+label+'">'+nm+'</div>'
+    var sel=_cargaSelectedTi===t.ti?' selected':'';
+    return '<div class="hbar-row'+sel+'"><div class="hbar-name" title="Filtrar a Distribuição de status por '+t.n+'" onclick="selectCargaTec('+t.ti+')" style="cursor:pointer">'+nm+'</div>'
       +'<div class="hbar-track"><div class="hbar-fill" style="width:'+w+'%;background:'+gcol+'"></div></div>'
       +'<div class="hbar-pct">'+p+'%</div>'
       +'<div style="font-size:10px;color:'+gcol+';font-family:JetBrains Mono,monospace;width:100px;text-align:right;flex-shrink:0">'+label+'</div></div>';
@@ -423,6 +430,7 @@ function switchLoadTab(tab, btn){
   document.getElementById('barsOvertime').style.display = tab==='extras' ? '' : 'none';
   document.getElementById('overtimeFilterRow').style.display = tab==='extras' ? 'flex' : 'none';
   if(tab!=='extras') _overtimeSelectedTi=null;
+  if(tab!=='carga') _cargaSelectedTi=null;
   refreshStatusPie();
   buildEmbarquePlaces();
 }
@@ -650,16 +658,26 @@ function buildOvertimePie(){
 }
 function buildPie(){
   var titleEl=document.getElementById('pieTitle');
-  if(titleEl) titleEl.textContent='Distribuição de status';
+  if(titleEl) titleEl.textContent = _cargaSelectedTi!==null
+    ? 'Distribuição de status — '+TECS[_cargaSelectedTi].n.split(' ').slice(0,2).join(' ')
+    : 'Distribuição de status';
   document.getElementById('pieC').style.display='';
   document.getElementById('pieEmptyMsg').style.display='none';
   document.getElementById('dayBarLegend').style.display='none';
   var idx=[];for(var i=dashS;i<=dashE;i++)idx.push(i);
+  var scope = _cargaSelectedTi!==null ? [TECS[_cargaSelectedTi]] : TECS;
   // Embarcado (EMB/EMB.) e Projeto são a mesma coisa (estar num projeto/plataforma é estar embarcado) — uma fatia só.
   var ct={EMBPROJ:0,FEMB:0,DES:0,DISP:0,MOB:0,AF:0,BASE:0};
-  TECS.forEach(function(t){idx.forEach(function(i){var v=t.d[i];if(!v)return;var u=v.trim().toUpperCase();if(u.indexOf('F.EMB')===0)ct.FEMB++;else if(u==='DES'||u==='DES.')ct.DES++;else if(u.indexOf('FOLGA')===0)ct.DISP++;else if(u.indexOf('MOB')===0)ct.MOB++;else if(u.indexOf('AFAS')===0)ct.AF++;else if(u==='BASE'||u==='HOTEL'||u==='RECAP')ct.BASE++;else if(u)ct.EMBPROJ++;});});
+  scope.forEach(function(t){idx.forEach(function(i){var v=t.d[i];if(!v)return;var u=v.trim().toUpperCase();if(u.indexOf('F.EMB')===0)ct.FEMB++;else if(u==='DES'||u==='DES.')ct.DES++;else if(u.indexOf('FOLGA')===0)ct.DISP++;else if(u.indexOf('MOB')===0)ct.MOB++;else if(u.indexOf('AFAS')===0)ct.AF++;else if(u==='BASE'||u==='HOTEL'||u==='RECAP')ct.BASE++;else if(u)ct.EMBPROJ++;});});
   var total=Object.keys(ct).reduce(function(s,k){return s+ct[k];},0);
   if(pieChart){pieChart.destroy();pieChart=null;}
+  if(total===0){
+    document.getElementById('pieC').style.display='none';
+    var emptyEl=document.getElementById('pieEmptyMsg');
+    emptyEl.style.display='flex';
+    emptyEl.textContent='Nenhum dia com status no período'+(_cargaSelectedTi!==null?' desse técnico':'');
+    return;
+  }
   pieChart=new Chart(document.getElementById('pieC'),{type:'doughnut',
     data:{labels:['Embarcado/Projeto','Folga emb.','Desembarque','FOLGA','Mobilização','Afastado','Base/Hotel'],
       datasets:[{data:[ct.EMBPROJ,ct.FEMB,ct.DES,ct.DISP,ct.MOB,ct.AF,ct.BASE],

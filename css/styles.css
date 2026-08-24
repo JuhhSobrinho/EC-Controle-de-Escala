@@ -76,7 +76,7 @@ td.day-cell.folga-preview{outline:2px dashed var(--st-femb);outline-offset:-2px}
 .metric-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
 .metric-value{font-size:28px;font-weight:300;line-height:1}
 .metric-note{font-size:11px;color:var(--text3);margin-top:5px}
-.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.dash-grid{display:grid;grid-template-columns:2fr 3fr;gap:16px;margin-bottom:16px}
 .dash-grid.full{grid-template-columns:1fr}
 @media(max-width:900px){.dash-grid{grid-template-columns:1fr}}
 .chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1.25rem 1.5rem}
