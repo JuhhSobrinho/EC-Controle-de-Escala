@@ -550,7 +550,7 @@ function buildOvertimePie(){
   if(_overtimeSelectedTi!==null){
     var t=TECS[_overtimeSelectedTi];
     if(titleEl) titleEl.textContent='Horas por dia — '+t.n.split(' ').slice(0,2).join(' ');
-    var labels=[], values=[], colors=[], guide=[];
+    var labels=[], values=[], colors=[], guide=[], statuses=[];
     for(var i=dashS;i<=dashE;i++){
       var u=(t.d[i]||'').trim().toUpperCase();
       if(!u) continue;
@@ -563,12 +563,14 @@ function buildOvertimePie(){
       labels.push(dp[0]+'/'+dp[1]);
       values.push(+realDec.toFixed(2));
       guide.push(prevDec);
+      statuses.push(t.d[i]);
       // dia de folga: QUALQUER hora trabalhada é extra a 100%, não só o excedente sobre a previsão
       var worked = realHr && realDec>0.01;
       var isRestStatus = u.indexOf('F.EMB')===0 || u.indexOf('FOLGA')===0;
+      var isMob = getCategory(u)==='mob'; // DES./MOB. — mobilização, não é "folga trabalhada" propriamente
       var isOvertime = worked && (t.fo[i] ? true : (realDec-prevDec)>0.01);
       var color;
-      if(isOvertime) color = t.fo[i] ? '#e85b5b' : '#eab308';
+      if(isOvertime) color = !t.fo[i] ? '#eab308' : (isMob ? '#4a9eff' : '#e85b5b');
       else if(!worked && isRestStatus) color = '#64748b'; // folga de fato (não trabalhou) — cinza, diferente do azul de dia trabalhado
       else color = '#2f4bd0';
       colors.push(color);
@@ -594,7 +596,9 @@ function buildOvertimePie(){
         plugins:{
           legend:{display:false},
           tooltip:{callbacks:{label:function(ctx){
-            return (ctx.dataset.type==='line'?'Previsto: ':'Trabalhado: ')+fmtHrs(ctx.parsed.y);
+            var prefix = ctx.dataset.type==='line' ? 'Previsto: ' : 'Trabalhado: ';
+            var statusTxt = statuses[ctx.dataIndex] ? ' ('+statuses[ctx.dataIndex]+')' : '';
+            return prefix+fmtHrs(ctx.parsed.y)+statusTxt;
           }}}
         }
       }
