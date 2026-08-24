@@ -580,7 +580,7 @@ function buildOvertimePie(){
       var color;
       if(isOvertime) color = !t.fo[i] ? '#eab308' : (isMob ? '#4a9eff' : '#e85b5b');
       else if(!worked && isRestStatus) color = '#64748b'; // folga de fato (não trabalhou) — cinza, diferente do azul de dia trabalhado
-      else color = '#2f4bd0';
+      else color = isMob ? '#4a9eff' : '#2f4bd0'; // MOB. normal também usa o azul mais claro, não o azul padrão de embarcado/projeto
       colors.push(color);
     }
     if(!labels.length){
