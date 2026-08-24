@@ -44,7 +44,7 @@
 :root.light .header{box-shadow:0 1px 3px rgba(0,0,0,.07)}
 :root.light .chart-card,:root.light .modal,:root.light .tbl-outer,:root.light .weekly-outer,:root.light .kpi-card,:root.light .metric-card{box-shadow:0 1px 4px rgba(0,0,0,.06)}
 *{transition:background-color .2s,border-color .2s,color .15s}
-html{font-size:14px}
+html{font-size:14px;zoom:.8}
 body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
 .header{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:60px;position:sticky;top:0;z-index:200}
 .header-left{display:flex;align-items:center;gap:14px}
