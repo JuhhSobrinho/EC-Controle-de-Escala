@@ -538,9 +538,17 @@ function buildOvertimeBars(){
       +'<div class="hbar-pct">'+fmtHrs(d.extra)+'</div></div>';
   }).join('');
 }
+var DAY_BAR_LEGEND=[
+  {color:'#2f4bd0', label:'Normal'},
+  {color:'#eab308', label:'50%'},
+  {color:'#e85b5b', label:'100%'},
+  {color:'#4a9eff', label:'Mobilização'},
+  {color:'#64748b', label:'Folga'}
+];
 function buildOvertimePie(){
   var titleEl=document.getElementById('pieTitle');
   var canvasEl=document.getElementById('pieC'), msgEl=document.getElementById('pieEmptyMsg');
+  var legendEl=document.getElementById('dayBarLegend');
   if(pieChart){pieChart.destroy();pieChart=null;}
 
   // com um técnico selecionado: um gráfico de barras, uma barra por dia com previsão de horas
@@ -567,7 +575,7 @@ function buildOvertimePie(){
       // dia de folga: QUALQUER hora trabalhada é extra a 100%, não só o excedente sobre a previsão
       var worked = realHr && realDec>0.01;
       var isRestStatus = u.indexOf('F.EMB')===0 || u.indexOf('FOLGA')===0;
-      var isMob = getCategory(u)==='mob'; // DES./MOB. — mobilização, não é "folga trabalhada" propriamente
+      var isMob = u.indexOf('MOB')===0; // só MOB. (não DES. — getCategory agrupa os dois como 'mob', mas aqui é só mobilização mesmo)
       var isOvertime = worked && (t.fo[i] ? true : (realDec-prevDec)>0.01);
       var color;
       if(isOvertime) color = !t.fo[i] ? '#eab308' : (isMob ? '#4a9eff' : '#e85b5b');
@@ -579,10 +587,15 @@ function buildOvertimePie(){
       canvasEl.style.display='none';
       msgEl.style.display='flex';
       msgEl.textContent='Nenhum dia com previsão de horas desse técnico no período';
+      legendEl.style.display='none';
       return;
     }
     canvasEl.style.display='';
     msgEl.style.display='none';
+    legendEl.style.display='flex';
+    legendEl.innerHTML=DAY_BAR_LEGEND.map(function(l){
+      return '<div style="display:flex;align-items:center;gap:4px;white-space:nowrap"><span style="width:8px;height:8px;border-radius:2px;background:'+l.color+';flex-shrink:0;display:inline-block"></span>'+l.label+'</div>';
+    }).join('');
     pieChart=new Chart(canvasEl,{
       data:{labels:labels, datasets:[
         {type:'bar', label:'Horas trabalhadas', data:values, backgroundColor:colors, borderRadius:3, order:2, barPercentage:0.7},
@@ -606,6 +619,7 @@ function buildOvertimePie(){
     return;
   }
 
+  legendEl.style.display='none';
   var tot50=0, tot100=0;
   TECS.forEach(function(t){
     var s=_overtimeSplit(t, dashS, dashE);
@@ -639,6 +653,7 @@ function buildPie(){
   if(titleEl) titleEl.textContent='Distribuição de status';
   document.getElementById('pieC').style.display='';
   document.getElementById('pieEmptyMsg').style.display='none';
+  document.getElementById('dayBarLegend').style.display='none';
   var idx=[];for(var i=dashS;i<=dashE;i++)idx.push(i);
   // Embarcado (EMB/EMB.) e Projeto são a mesma coisa (estar num projeto/plataforma é estar embarcado) — uma fatia só.
   var ct={EMBPROJ:0,FEMB:0,DES:0,DISP:0,MOB:0,AF:0,BASE:0};
