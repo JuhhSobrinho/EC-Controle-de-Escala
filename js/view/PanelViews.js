@@ -610,13 +610,18 @@ function buildOvertimePie(){
         {type:'line', label:'Previsto', data:guide, borderColor:'#8a91a8', borderDash:[5,4], borderWidth:1.5, pointRadius:0, fill:false, order:1}
       ]},
       options:{responsive:true,maintainAspectRatio:false,
+        // 'index'+intersect:false: o tooltip é escolhido pelo dia (categoria no eixo x) mais
+        // próximo do cursor, não pelo ponto de dado mais próximo em qualquer direção — sem
+        // isso, passar o mouse perto da base de uma barra podia "pegar" o topo de uma barra
+        // vizinha (mais alta) por estar geometricamente mais perto, mostrando o dia errado.
+        interaction:{mode:'index', axis:'x', intersect:false},
         scales:{
           x:{ticks:{color:'#8a91a8',font:{size:9},maxRotation:0,autoSkip:true}, grid:{display:false}},
           y:{ticks:{color:'#8a91a8',font:{size:10}}, grid:{color:'rgba(255,255,255,.05)'}, beginAtZero:true}
         },
         plugins:{
           legend:{display:false},
-          tooltip:{callbacks:{label:function(ctx){
+          tooltip:{mode:'index', intersect:false, callbacks:{label:function(ctx){
             var prefix = ctx.dataset.type==='line' ? 'Previsto: ' : 'Trabalhado: ';
             var statusTxt = statuses[ctx.dataIndex] ? ' ('+statuses[ctx.dataIndex]+')' : '';
             return prefix+fmtHrs(ctx.parsed.y)+statusTxt;
