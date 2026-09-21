@@ -16,6 +16,10 @@ function shiftMonth(dir){
   buildTable();
 }
 function doSearch(v){search=v.toLowerCase();buildTable();}
+function toggleNameSort(){
+  nameSort = nameSort==='asc'?'desc':(nameSort==='desc'?null:'asc');
+  buildTable();
+}
 function toggleF(f){
   activeF=activeF===f?null:f;
   ['Over','Under','Ideal'].forEach(function(x){document.getElementById('f'+x).classList.toggle('on',activeF===x.toLowerCase());});

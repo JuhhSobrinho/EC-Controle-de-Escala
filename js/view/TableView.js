@@ -42,8 +42,18 @@ function buildTable(){
   if(activeF==='over')rows=rows.filter(function(t){return t.p>0.55;});
   if(activeF==='under')rows=rows.filter(function(t){return t.p<0.45&&t.p>0;});
   if(activeF==='ideal')rows=rows.filter(function(t){return t.p>=0.45&&t.p<=0.55;});
+  if(nameSort)rows.sort(function(a,b){
+    var r=a.n.localeCompare(b.n,'pt-BR',{sensitivity:'base'});
+    return nameSort==='asc'?r:-r;
+  });
   var h='<thead><tr>';
-  h+='<th class="fx th-info" style="min-width:215px">Nome</th>';
+  h+='<th class="fx th-info" style="min-width:215px">'
+    +'<div class="name-th"><span>Nome</span>'
+    +'<span class="sort-toggle'+(nameSort?' on':'')+'" onclick="toggleNameSort()" title="Ordenar por nome">'
+    +(nameSort==='desc'
+      ?'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 19V5M5 12l7 7 7-7"/></svg>'
+      :'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12l7-7 7 7"/></svg>')
+    +'</span></div></th>';
   for(var i=ws;i<=we;i++){
     var isT=(i===T_IDX), dp=DATES[i].split('/');
     var tc=isT?' today-col':'', pill=isT?'<span class="today-pill">hoje</span>':'';

@@ -30,7 +30,7 @@ if(T_IDX === -1){
 var WIN     = 16;
 var DOW_MAP = {0:'Dom',1:'Seg',2:'Ter',3:'Qua',4:'Qui',5:'Sex',6:'Sáb'};
 var TECS = [];
-var winStart = T_IDX - WIN, activeF = null, search = '';
+var winStart = T_IDX - WIN, activeF = null, search = '', nameSort = null;
 var expandedRows = {};
 
 var STATUSES=[
