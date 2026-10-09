@@ -871,19 +871,20 @@ function _countEvents(scope, fromIdx, toIdx){
         while(s0>0&&_eventKey(t.d[s0-1])===key) s0--;
         while(end+1<DATES.length&&_eventKey(t.d[end+1])===key) end++;
         var kind=key==='MOB'?'mob':(key==='FEMB'?'des':'emb');
-        var g=seen[key+'@'+s0]||(seen[key+'@'+s0]={kind:kind,s0:s0,on:false});
+        var g=seen[key+'@'+s0]||(seen[key+'@'+s0]={kind:kind,s0:s0,on:false,dur:0});
         if(s0<=T_IDX&&end>=T_IDX) g.on=true;
-        if(kind==='emb'&&end<T_IDX){ durSum+=end-s0+1; durN++; }
+        if(end-s0+1>g.dur) g.dur=end-s0+1;
       }
       if(k!==key) start=i;
       key=k;
     }
   });
-  var r={emb:0,mob:0,des:0,on:0,done:0,next:0,avgDur:durN?durSum/durN:null};
+  var r={emb:0,mob:0,des:0,on:0,done:0,next:0,avgDur:null};
   Object.keys(seen).forEach(function(k){
     var g=seen[k]; r[g.kind]++;
-    if(g.kind==='emb'){ if(g.on) r.on++; else if(g.s0>T_IDX) r.next++; else r.done++; }
+    if(g.kind==='emb'){ if(g.on) r.on++; else if(g.s0>T_IDX) r.next++; else { r.done++; durSum+=g.dur; durN++; } }
   });
+  r.avgDur=durN?durSum/durN:null;
   return r;
 }
 function buildPie(){
@@ -1006,15 +1007,19 @@ function buildProjectCards(){
     for(var i=dashS;i<=last+1;i++){
       var proj=i<=last?_projNorm(t.d[i]):null;
       if(cur&&cur.proj!==proj){
+        // dias do embarque = dias REAIS embarcados (do dia em que subiu até o último dia), mesmo que
+        // o embarque comece antes ou continue depois do período filtrado (o aviso "antes do período" cobre isso)
         var start=cur.from;
         while(start>0&&_projNorm(t.d[start-1])===cur.proj) start--;
-        var m=map[cur.proj]||(map[cur.proj]={proj:cur.proj,days:0,real:0,techs:{},groups:{}});
-        m.days+=cur.days; m.real+=cur.real; m.techs[t.n]=true;
-        var g=m.groups[start]||(m.groups[start]={startIdx:start,days:0,real:0,rows:[]});
-        g.days+=cur.days; g.real+=cur.real;
         var end=i-1;
         while(end+1<DATES.length&&_projNorm(t.d[end+1])===cur.proj) end++;
-        g.rows.push({tec:t.n,toIdx:i-1,days:cur.days,real:cur.real,on:start<=T_IDX&&end>=T_IDX,endIdx:end,downKnown:!!(t.d[end+1]||'').trim()});
+        var tdays=end-start+1, treal=0;
+        for(var q=start;q<=end;q++) treal+=_hrsToNum(t.hr[q]);
+        var m=map[cur.proj]||(map[cur.proj]={proj:cur.proj,techDays:0,days:0,real:0,techs:{},groups:{}});
+        m.techDays+=tdays; m.real+=treal; m.techs[t.n]=true;
+        var g=m.groups[start]||(m.groups[start]={startIdx:start,techDays:0,days:0,real:0,rows:[]});
+        g.techDays+=tdays; g.real+=treal;
+        g.rows.push({tec:t.n,toIdx:end,days:tdays,real:treal,on:start<=T_IDX&&end>=T_IDX,endIdx:end,downKnown:!!(t.d[end+1]||'').trim()});
         cur=null;
       }
       if(proj){
@@ -1028,6 +1033,8 @@ function buildProjectCards(){
     m.embarques=Object.keys(m.groups).map(function(s){return m.groups[s];}).sort(function(a,b){return a.startIdx-b.startIdx;});
     m.embarques.forEach(function(g){
       g.rows.sort(function(a,b){return a.tec.localeCompare(b.tec);});
+      // duração do embarque = o técnico que ficou mais tempo (não a soma dos técnicos)
+      g.days=Math.max.apply(null,g.rows.map(function(b){return b.days;}));
       g.status=g.rows.some(function(b){return b.on;})?'on':(g.startIdx>T_IDX?'next':'done');
       // dia do desembarque (1º dia depois do último embarcado): em andamento = o mais próximo; realizado = quando o último saiu
       var pool=g.status==='on'?g.rows.filter(function(b){return b.on;}):g.rows;
@@ -1035,6 +1042,7 @@ function buildProjectCards(){
       g.downIdx=endIdx+1;
       g.downKnown=pool.filter(function(b){return b.endIdx===endIdx;}).some(function(b){return b.downKnown;});
     });
+    m.days=m.embarques.reduce(function(a,g){return a+g.days;},0);
     var done=m.embarques.filter(function(g){return g.status==='done';});
     var on=m.embarques.filter(function(g){return g.status==='on';});
     var nxt=m.embarques.filter(function(g){return g.status==='next';});
@@ -1060,7 +1068,7 @@ function renderProjCards(){
       +'<div class="proj-card-name"><span>'+escAttr(r.proj)+'</span><svg class="proj-chev" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>'
       +'<div class="proj-card-days">'+r.days+'<small>dia'+(r.days!==1?'s':'')+'</small></div>'
       +'<div class="proj-card-meta">'+nt+' técnico'+(nt!==1?'s':'')+'<br>'+ne+' embarque'+(ne!==1?'s':'')
-      +' · '+(r.days*11)+'h previstas'+(r.real>0?' · '+Math.round(r.real)+'h reais':'')+'</div></div>'
+      +' · '+(r.techDays*11)+'h previstas'+(r.real>0?' · '+Math.round(r.real)+'h reais':'')+'</div></div>'
       +(open?projDetailHtml(r):'')+'</div>';
   }).join('');
 }
@@ -1084,8 +1092,8 @@ function projDetailHtml(r){
   var html='<div class="proj-groups">';
   r.embarques.forEach(function(g,gi){
     var dp=DATES[g.startIdx].slice(0,5), pre=g.startIdx<dashS;
-    html+='<div class="proj-group"><div class="proj-group-head"><span><b>Embarque '+(gi+1)+'</b> · '+(g.startIdx>T_IDX?'sobe ':'subiu ')+dp+(pre?' <span class="proj-pre">antes do período</span>':'')+' <span class="proj-st st-'+g.status+'">'+PROJ_ST[g.status]+'</span></span>'
-      +'<span class="proj-group-sum">'+g.rows.length+' técnico'+(g.rows.length!==1?'s':'')+' · '+g.days+'d · '+(g.days*11)+'h</span></div>'
+    html+='<div class="proj-group"><div class="proj-group-head"><span><b>Embarque '+(gi+1)+'</b> · '+(g.startIdx>T_IDX?'sobe ':'subiu ')+dp+(pre?' <span class="proj-pre">antes do período</span>':'')+(g.rows.some(function(b){return b.endIdx>dashE;})?' <span class="proj-pre">continua após o período</span>':'')+' <span class="proj-st st-'+g.status+'">'+PROJ_ST[g.status]+'</span></span>'
+      +'<span class="proj-group-sum">'+g.rows.length+' técnico'+(g.rows.length!==1?'s':'')+' · '+g.days+'d · '+(g.techDays*11)+'h</span></div>'
       +'<table class="proj-tbl"><tbody>';
     g.rows.forEach(function(b){
       html+='<tr><td>'+escAttr(b.tec)+'</td>'
