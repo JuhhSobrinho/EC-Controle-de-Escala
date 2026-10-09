@@ -37,7 +37,7 @@ var STATUSES=[
   {v:'EMB',cls:'be',label:'EMB'},{v:'F.EMB',cls:'bfe',label:'F.EMB'},
   {v:'DES',cls:'bde',label:'DES'},{v:'FOLGA',cls:'bdi',label:'FOLGA'},
   {v:'MOB.',cls:'bmo',label:'MOB.'},{v:'TREINAM.',cls:'btr',label:'TREINAM.'},
-  {v:'BASE',cls:'bba',label:'BASE'},{v:'AFASTADO',cls:'baf',label:'AFAS'},
+  {v:'BASE',cls:'bba',label:'BASE'},{v:'T.EMB',cls:'bte',label:'T.EMB'},{v:'AFASTADO',cls:'baf',label:'AFAS'},
   {v:'FÉRIAS',cls:'bfr',label:'FÉRIAS'}
 ];
 
@@ -77,6 +77,7 @@ function badgeCls(v){
   if(u.indexOf('FOLGA')===0)return 'bdi';
   if(u.indexOf('MOB')===0)return 'bmo';
   if(u.indexOf('AFAS')===0)return 'baf';
+  if(u==='T.EMB')return 'bte';
   if(u==='BASE'||u==='HOTEL'||u==='RECAP')return 'bba';
   if(u.indexOf('FÉRIAS')===0||u.indexOf('FERIAS')===0)return 'bfr';
   if(isTrainingStatus(u))return 'btr';

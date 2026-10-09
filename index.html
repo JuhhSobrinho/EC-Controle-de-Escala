@@ -105,7 +105,7 @@
     <span class="leg-item"><span class="leg-dot" style="background:var(--disp)"></span>FOLGA</span>
     <span class="leg-item"><span class="leg-dot" style="background:var(--st-mob)"></span>Mobilização</span>
     <span class="leg-item"><span class="leg-dot" style="background:var(--af)"></span>Afastado</span>
-    <span class="leg-item"><span class="leg-dot" style="background:var(--base)"></span>Base / Hotel</span>
+    <span class="leg-item"><span class="leg-dot" style="background:var(--base)"></span>Base / Hotel / T.EMB</span>
     <span class="leg-item"><span class="leg-dot" style="background:var(--st-trein)"></span>Treinamento / Curso</span>
     <span class="leg-item">
       <span style="display:inline-flex;align-items:center;gap:4px">
@@ -142,9 +142,10 @@
     <button class="period-btn" id="pSem" onclick="setPeriod(&#39;sem&#39;)">Este semestre</button>
     <button class="period-btn" id="pAno" onclick="setPeriod(&#39;ano&#39;)">2026 completo</button>
     <span class="filter-range-info" id="rangeInfo">19 dias</span>
+    <button class="period-btn board-btn" onclick="openBoard()" title="Abre uma versão para imprimir (A4 paisagem) do dashboard no período selecionado">Gerar dashboard</button>
   </div>
   <div class="metric-row" id="metrics"></div>
-  <div class="dash-grid">
+  <div class="dash-grid carga-wide" id="loadGrid">
     <div class="chart-card">
       <div class="chart-title">
         <span>Carga por técnico</span>
@@ -158,13 +159,31 @@
         <button class="subtab-btn" data-mode="50" onclick="setOvertimeFilter('50',this)">50%</button>
         <button class="subtab-btn" data-mode="100" onclick="setOvertimeFilter('100',this)">100%</button>
       </div>
-      <div class="hbar-list" id="bars"></div>
+      <div id="cargaWrap">
+        <div class="carga-toolbar">
+          <input type="text" id="cargaSearch" class="carga-search" placeholder="Filtrar técnico ou plataforma..." oninput="setCargaFilter()">
+          <select id="cargaSit" class="carga-select" onchange="setCargaFilter()">
+            <option value="">Todas as situações</option>
+            <option value="emb">Embarcados hoje</option>
+            <option value="folga">De folga hoje</option>
+            <option value="mob">Em mobilização</option>
+            <option value="af">Afastados</option>
+            <option value="outros">Outros / sem status</option>
+          </select>
+        </div>
+        <div class="carga-scroll" id="cargaTbl"></div>
+      </div>
       <div class="hbar-list" id="barsOvertime" style="display:none"></div>
     </div>
     <div class="chart-card"><div class="chart-title" style="flex-wrap:wrap;row-gap:6px"><span id="pieTitle">Distribuição de status</span><div id="dayBarLegend" style="display:none;margin-left:auto;flex-wrap:wrap;gap:10px;font-size:9px;color:var(--text2);text-transform:none;letter-spacing:normal"></div></div><div style="position:relative;height:300px" id="pieWrap"><canvas id="pieC"></canvas><div id="pieEmptyMsg" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:var(--text3);font-size:12px;text-align:center;padding:0 24px"></div></div><div id="embarquePlaces" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:10px"></div></div>
   </div>
   <div class="dash-grid full">
-    <div class="chart-card"><div class="chart-title">Ocupação no período</div><div style="position:relative;height:210px"><canvas id="lineC"></canvas></div></div>
+    <div class="chart-card"><div class="chart-title">Ocupação no período</div><div style="position:relative;height:210px"><canvas id="lineC"></canvas></div>
+      <div id="projCardsWrap" style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
+        <div class="proj-cards-title"><span>Embarques por projeto / plataforma</span><span class="proj-legend"><span class="proj-legend-item"><i class="st-on"></i>Em andamento</span><span class="proj-legend-item"><i class="st-done"></i>Realizado</span><span class="proj-legend-item"><i class="st-next"></i>Previsto</span></span></div>
+        <div class="proj-cards" id="projCards"></div>
+      </div>
+    </div>
   </div>
 </div></div>
 <div class="overlay" id="cellOverlay" onclick="if(event.target===this)closeCell()">
@@ -517,6 +536,7 @@
 <script src="js/view/TableView.js"></script>
 <script src="js/view/ModalViews.js"></script>
 <script src="js/view/PanelViews.js"></script>
+<script src="js/view/BoardView.js"></script>
 <script src="js/controller/CellController.js"></script>
 <script src="js/controller/DragFillController.js"></script>
 <script src="js/controller/FolgaToggleController.js"></script>
