@@ -441,7 +441,7 @@ function _cargaData(){
     for(var i=s;i<=e+1;i++){
       var raw=i<=e?(t.d[i]||'').trim().toUpperCase():'';
       var kd=raw?_pieKind(raw):null;
-      var k=i<=e?_eventKey(t.d[i]):null;
+      var k=i<=e?_evKey(t,i):null;
       if(i<=e){
         if(kd) r.mix[kd]++;
         if(_isEmbKey(k)){ r.embD++; var pn=_projNorm(raw); if(pn) r.plats[pn]=(r.plats[pn]||0)+1; }
@@ -449,8 +449,8 @@ function _cargaData(){
       }
       if(key!==null&&k!==key&&_isEmbKey(key)){
         var s0=start, end=i-1;
-        while(s0>0&&_eventKey(t.d[s0-1])===key) s0--;
-        while(end+1<DATES.length&&_eventKey(t.d[end+1])===key) end++;
+        while(s0>0&&_evKey(t,s0-1)===key) s0--;
+        while(end+1<DATES.length&&_evKey(t,end+1)===key) end++;
         r.embarques++;
         r.blocks.push({key:key,s0:s0,end:end,st:(s0<=T_IDX&&end>=T_IDX)?'on':(s0>T_IDX?'next':'done')});
       }
@@ -860,16 +860,28 @@ function _eventKey(v){
    Cada evento é um grupo "mesmo tipo/projeto + mesmo dia de início real". Pros embarques, devolve
    também o status de cada grupo em relação a HOJE (on = alguém ainda está nele; next = sobe depois
    de hoje; done = já terminou) e a duração média (dias, bloco inteiro) dos blocos já finalizados. */
+/* Chave do dia pra agrupar embarques: o dia "EMB" genérico (viagem) e os dias da plataforma logo em
+   seguida são UM embarque só — então o "EMB" assume o nome do projeto do mesmo bloco embarcado
+   (primeiro olhando pra frente, depois pra trás). Sem projeto no bloco, continua "EMB". */
+function _isGenericEmb(v){var u=(v||'').trim().toUpperCase();return u==='EMB'||u==='EMB.';}
+function _evKey(t,j){
+  var k=_eventKey(t.d[j]);
+  if(k!=='EMB'&&k!=='EMB.') return k;
+  var q, p;
+  for(q=j+1;q<DATES.length&&_isEmbKey(_eventKey(t.d[q]));q++){ p=_eventKey(t.d[q]); if(_projNorm(p)) return p; }
+  for(q=j-1;q>=0&&_isEmbKey(_eventKey(t.d[q]));q--){ p=_eventKey(t.d[q]); if(_projNorm(p)) return p; }
+  return 'EMB';
+}
 function _countEvents(scope, fromIdx, toIdx){
   var seen={}, durSum=0, durN=0;
   scope.forEach(function(t){
     var start=null, key=null;
     for(var i=fromIdx;i<=toIdx+1;i++){
-      var k=i<=toIdx?_eventKey(t.d[i]):null;
+      var k=i<=toIdx?_evKey(t,i):null;
       if(key!==null&&k!==key){
         var s0=start, end=i-1;
-        while(s0>0&&_eventKey(t.d[s0-1])===key) s0--;
-        while(end+1<DATES.length&&_eventKey(t.d[end+1])===key) end++;
+        while(s0>0&&_evKey(t,s0-1)===key) s0--;
+        while(end+1<DATES.length&&_evKey(t,end+1)===key) end++;
         var kind=key==='MOB'?'mob':(key==='FEMB'?'des':'emb');
         var g=seen[key+'@'+s0]||(seen[key+'@'+s0]={kind:kind,s0:s0,on:false,dur:0});
         if(s0<=T_IDX&&end>=T_IDX) g.on=true;
@@ -1011,6 +1023,7 @@ function buildProjectCards(){
         // o embarque comece antes ou continue depois do período filtrado (o aviso "antes do período" cobre isso)
         var start=cur.from;
         while(start>0&&_projNorm(t.d[start-1])===cur.proj) start--;
+        while(start>0&&_isGenericEmb(t.d[start-1])) start--;
         var end=i-1;
         while(end+1<DATES.length&&_projNorm(t.d[end+1])===cur.proj) end++;
         var tdays=end-start+1, treal=0;
