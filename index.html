@@ -58,6 +58,11 @@
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
       Relatório
     </button>
+    <button class="hdr-btn" onclick="document.getElementById(&#39;importScaleInput&#39;).click()" title="Importar a escala (status, folga, observações) de uma planilha .xlsx no formato do Relatório, escolhendo o período">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+      Importar Escala
+    </button>
+    <input type="file" id="importScaleInput" accept=".xlsx" style="display:none" onchange="loadScaleFile(this)">
     <button class="hdr-btn" onclick="document.getElementById(&#39;importHrsInput&#39;).click()" title="Importar horas de arquivo .xlsx">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
       Importar Horas
@@ -503,6 +508,19 @@
     </div>
   </div>
 </div>
+<div class="overlay" id="scaleImpOverlay" onclick="if(event.target===this)closeScaleImport()">
+  <div class="modal" style="width:680px;max-height:90vh">
+    <div class="modal-head">
+      <div><div class="modal-title">Importar Escala da Planilha</div><div class="modal-sub" id="siSub">Lendo arquivo...</div></div>
+      <button class="modal-close" onclick="closeScaleImport()">×</button>
+    </div>
+    <div class="modal-body" id="siBody" style="overflow-y:auto;max-height:62vh"></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeScaleImport()">Cancelar</button>
+      <button class="btn btn-accent" id="siApplyBtn" onclick="applyScaleImport()" disabled><span id="siApplyLbl">Aplicar</span></button>
+    </div>
+  </div>
+</div>
 <div class="overlay" id="importOverlay" onclick="if(event.target===this)closeImport()">
   <div class="modal" style="width:560px;max-height:85vh">
     <div class="modal-head">
@@ -544,6 +562,7 @@
 <script src="js/controller/TrainingController.js"></script>
 <script src="js/controller/TecnicoController.js"></script>
 <script src="js/controller/ImportController.js"></script>
+<script src="js/controller/ScaleImportController.js"></script>
 <script src="js/controller/ReportController.js"></script>
 <script src="js/controller/NavController.js"></script>
 <script src="js/controller/SyncController.js"></script>
