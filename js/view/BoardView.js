@@ -2,15 +2,46 @@
    Abre numa janela própria (mesmo padrão do Resumo de Horas) com HTML/CSS/SVG estáticos e tema claro,
    sem Chart.js, pra imprimir nítido e caber numa folha só. Usa o período selecionado no Dashboard. ── */
 
-/* contagem por status (dias e técnicos) + eventos, mesmo cálculo da Distribuição de status */
+/* Chave de agrupamento do dia na Distribuição de status. Embarque usa a mesma lógica dos cards (projeto/
+   plataforma; o dia "EMB" de viagem entra na plataforma seguinte); treinamento e afins agrupam pelo próprio
+   status. As demais situações usam o tipo da fatia (FEMB, DES, DISP, MOB, AF, BASE). */
+function _distKey(t,j){
+  var kd=_pieKind(t.d[j]);
+  if(!kd) return null;
+  if(kd!=='EMBPROJ') return kd;
+  if(_isEmbKey(_eventKey(t.d[j]))) return 'EMBPROJ|'+_evKey(t,j);
+  return 'EMBPROJ|'+String(t.d[j]).trim().toUpperCase();
+}
+/* Contagem da Distribuição de status.
+   Embarcado/Projeto, Folga emb., Desembarque, FOLGA e Mobilização contam por EVENTO: técnicos que começaram
+   no mesmo dia, no mesmo projeto/situação, são um evento só, e o evento dura o que durou o técnico que ficou
+   mais tempo (2 técnicos por 12 dias = 12 dias; um com 12 e outro com 14 = 14). A duração é a real (do dia em
+   que começou até o último dia), mesmo passando das pontas do período, igual aos cards de projeto.
+   Afastado e Base/Hotel continuam somando os dias de cada técnico. tc = quantos técnicos passaram por cada situação. */
+var _DIST_EVENT={EMBPROJ:1,FEMB:1,DES:1,DISP:1,MOB:1};
 function _statusDist(scope){
   var ct={EMBPROJ:0,FEMB:0,DES:0,DISP:0,MOB:0,AF:0,BASE:0};
   var tc={EMBPROJ:0,FEMB:0,DES:0,DISP:0,MOB:0,AF:0,BASE:0};
+  var groups={};
   scope.forEach(function(t){
-    var seenK={};
-    for(var i=dashS;i<=dashE;i++){var kd=_pieKind(t.d[i]);if(kd){ct[kd]++;seenK[kd]=true;}}
-    Object.keys(seenK).forEach(function(k){tc[k]++;});
+    var seenK={}, start=null, key=null;
+    for(var i=dashS;i<=dashE+1;i++){
+      var k=i<=dashE?_distKey(t,i):null;
+      if(k){ var kd=k.split('|')[0]; seenK[kd]=true; if(!_DIST_EVENT[kd]) ct[kd]++; }
+      if(key!==null&&k!==key&&_DIST_EVENT[key.split('|')[0]]){
+        var s0=start, end=i-1;
+        while(s0>0&&_distKey(t,s0-1)===key) s0--;
+        while(end+1<DATES.length&&_distKey(t,end+1)===key) end++;
+        var gk=key+'@'+s0, len=end-s0+1;
+        if(!groups[gk]) groups[gk]={kd:key.split('|')[0],len:0};
+        if(len>groups[gk].len) groups[gk].len=len;
+      }
+      if(k!==key) start=i;
+      key=k;
+    }
+    Object.keys(seenK).forEach(function(kd){tc[kd]++;});
   });
+  Object.keys(groups).forEach(function(gk){ ct[groups[gk].kd]+=groups[gk].len; });
   var total=Object.keys(ct).reduce(function(s,k){return s+ct[k];},0);
   return {ct:ct,tc:tc,ev:_countEvents(scope,dashS,dashE),total:total};
 }
@@ -231,7 +262,7 @@ function buildBoardHtml(){
     +'<div class="page">'
     +'<div class="hd"><h1>Painel de Embarques</h1><div class="per"><b>'+s0+' → '+e0+'</b> · '+nd+' dia'+(nd!==1?'s':'')+'<br>Hoje: '+DATES[T_IDX]+'</div></div>'
     +'<div class="kpis">'+kpi+'</div>'
-    +'<div class="row r2"><div class="box"><div class="box-h">Distribuição de status <span>dias de técnico no período</span></div>'+_boardStatusCols()+'</div>'
+    +'<div class="row r2"><div class="box"><div class="box-h">Distribuição de status <span>dias · técnicos juntos contam uma vez</span></div>'+_boardStatusCols()+'</div>'
     +'<div class="box"><div class="box-h">Ocupação no período <span>'+legend+'</span></div><div class="chart">'+_boardLineSvg()+'</div></div></div>'
     +'<div class="row r3"><div class="box"><div class="box-h">Embarques por projeto <span><span><i style="background:#e85b5b"></i>Realizado</span><span><i style="background:#2f4bd0"></i>Em andamento</span><span><i style="background:#eab308"></i>Previsto</span></span></div>'+_boardProjects()+'</div>'
     +'<div class="box"><div class="box-h">Próximos 14 dias</div>'+_boardUpcoming()+'</div>'
