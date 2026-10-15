@@ -12,38 +12,31 @@ function _distKey(t,j){
   if(_isEmbKey(_eventKey(t.d[j]))) return 'EMBPROJ|'+_evKey(t,j);
   return 'EMBPROJ|'+String(t.d[j]).trim().toUpperCase();
 }
-/* Contagem da Distribuição de status.
-   Embarcado/Projeto, Folga emb., Desembarque, FOLGA e Mobilização contam por EVENTO: técnicos que começaram
-   no mesmo dia, no mesmo projeto/situação, são um evento só, e o evento dura o que durou o técnico que ficou
-   mais tempo (2 técnicos por 12 dias = 12 dias; um com 12 e outro com 14 = 14). A duração é a real (do dia em
-   que começou até o último dia), mesmo passando das pontas do período, igual aos cards de projeto.
-   Afastado e Base/Hotel continuam somando os dias de cada técnico. tc = quantos técnicos passaram por cada situação. */
+/* Contagem da Distribuição de status, em DIAS DO CALENDÁRIO dentro do período.
+   Embarcado/Projeto, Folga emb., Desembarque, FOLGA e Mobilização contam cada dia em que PELO MENOS UM técnico
+   estava naquela situação — e, no embarque, por plataforma: 3 técnicos na P-77 de 01 a 05/10 = 5 dias de P-77
+   (não 15); um técnico de 01 a 12 e outro de 01 a 14 na mesma plataforma = 14 dias. Plataformas diferentes
+   ao mesmo tempo somam (P-77 5 dias + PMLZ 5 dias = 10). Afastado e Base/Hotel continuam somando os dias de cada
+   técnico. tc = quantos técnicos passaram por cada situação no período. */
 var _DIST_EVENT={EMBPROJ:1,FEMB:1,DES:1,DISP:1,MOB:1};
 function _statusDist(scope){
   var ct={EMBPROJ:0,FEMB:0,DES:0,DISP:0,MOB:0,AF:0,BASE:0};
   var tc={EMBPROJ:0,FEMB:0,DES:0,DISP:0,MOB:0,AF:0,BASE:0};
-  var groups={};
+  var dayset={}; // chave (situação ou situação|plataforma) → {índice do dia: 1}
   scope.forEach(function(t){
-    var seenK={}, start=null, key=null;
-    for(var i=dashS;i<=dashE+1;i++){
-      var k=i<=dashE?_distKey(t,i):null;
-      if(k){ var kd=k.split('|')[0]; seenK[kd]=true; if(!_DIST_EVENT[kd]) ct[kd]++; }
-      if(key!==null&&k!==key&&_DIST_EVENT[key.split('|')[0]]){
-        var s0=start, end=i-1;
-        while(s0>0&&_distKey(t,s0-1)===key) s0--;
-        while(end+1<DATES.length&&_distKey(t,end+1)===key) end++;
-        var gk=key+'@'+s0, len=end-s0+1;
-        if(!groups[gk]) groups[gk]={kd:key.split('|')[0],len:0};
-        if(len>groups[gk].len) groups[gk].len=len;
-      }
-      if(k!==key) start=i;
-      key=k;
+    var seenK={};
+    for(var i=dashS;i<=dashE;i++){
+      var k=_distKey(t,i);
+      if(!k) continue;
+      var kd=k.split('|')[0];
+      seenK[kd]=true;
+      if(_DIST_EVENT[kd]){ (dayset[k]=dayset[k]||{})[i]=1; } else ct[kd]++;
     }
     Object.keys(seenK).forEach(function(kd){tc[kd]++;});
   });
-  Object.keys(groups).forEach(function(gk){ ct[groups[gk].kd]+=groups[gk].len; });
+  Object.keys(dayset).forEach(function(k){ ct[k.split('|')[0]]+=Object.keys(dayset[k]).length; });
   var total=Object.keys(ct).reduce(function(s,k){return s+ct[k];},0);
-  return {ct:ct,tc:tc,ev:_countEvents(scope,dashS,dashE),total:total};
+  return {ct:ct,tc:tc,ev:_countEvents(scope,dashS,dashE),total:total,dayset:dayset};
 }
 
 /* onde o técnico está/vai ficar: o dia "EMB" genérico (viagem) não diz a plataforma, então olha pra
@@ -262,7 +255,7 @@ function buildBoardHtml(){
     +'<div class="page">'
     +'<div class="hd"><h1>Painel de Embarques</h1><div class="per"><b>'+s0+' → '+e0+'</b> · '+nd+' dia'+(nd!==1?'s':'')+'<br>Hoje: '+DATES[T_IDX]+'</div></div>'
     +'<div class="kpis">'+kpi+'</div>'
-    +'<div class="row r2"><div class="box"><div class="box-h">Distribuição de status <span>dias · técnicos juntos contam uma vez</span></div>'+_boardStatusCols()+'</div>'
+    +'<div class="row r2"><div class="box"><div class="box-h">Distribuição de status <span>dias do período · técnicos juntos na mesma plataforma contam uma vez</span></div>'+_boardStatusCols()+'</div>'
     +'<div class="box"><div class="box-h">Ocupação no período <span>'+legend+'</span></div><div class="chart">'+_boardLineSvg()+'</div></div></div>'
     +'<div class="row r3"><div class="box"><div class="box-h">Embarques por projeto <span><span><i style="background:#e85b5b"></i>Realizado</span><span><i style="background:#2f4bd0"></i>Em andamento</span><span><i style="background:#eab308"></i>Previsto</span></span></div>'+_boardProjects()+'</div>'
     +'<div class="box"><div class="box-h">Próximos 14 dias</div>'+_boardUpcoming()+'</div>'
