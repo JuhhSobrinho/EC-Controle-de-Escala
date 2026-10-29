@@ -70,7 +70,9 @@ function _tmSaveRules(){
   try{ localStorage.setItem(TM_STORE,JSON.stringify(diff)); }catch(e){}
 }
 
-/* tomador de um dia. unknown (opcional) coleta statuses sem regra (caem em TISI). */
+/* nome do status como está na tabela (maiúsculo, sem espaços nas pontas) — usado quando não há regra */
+function _tmRaw(t, i){ return String(t.d[i]==null?'':t.d[i]).trim().toUpperCase(); }
+/* tomador de um dia. unknown (opcional) coleta statuses sem regra (saem com o próprio nome). */
 function _tmDay(t, i, unknown){
   var key=_tmKey(t.d[i]);
   if(key==='') return TM_TISI;
@@ -81,13 +83,13 @@ function _tmDay(t, i, unknown){
     return (k>=0&&TM_TRANSIT[_tmKey(t.d[k])])?_tmDestino(t,i):TM_TISI;
   }
   var loc=TM_RULES[key];
-  if(!loc){ if(unknown) unknown[key]=(unknown[key]||0)+1; return TM_TISI; }
+  if(!loc){ if(unknown) unknown[key]=(unknown[key]||0)+1; return _tmRaw(t,i); }
   return loc;
 }
 function _tmDestino(t, i){
   var j=i; while(j<DATES.length&&(TM_TRANSIT[_tmKey(t.d[j])]||_tmKey(t.d[j])==='HOTEL')) j++;
   var key=j<DATES.length?_tmKey(t.d[j]):'';
-  var loc=key?TM_RULES[key]:null;
+  var loc=key?(TM_RULES[key]||_tmRaw(t,j)):null;
   return loc||TM_TISI;
 }
 
@@ -148,7 +150,7 @@ function tmQuick(kind){
 }
 function tmMonthChange(){ tmAutoSelect(); tmRecalc(); }
 function tmToggleTec(ti,on){ _tm.sel[ti]=!!on; tmRecalc(); }
-function tmSetRule(sel){ TM_RULES[sel.getAttribute('data-k')]=sel.value; _tmSaveRules(); tmRecalc(); }
+function tmSetRule(sel){ TM_RULES[sel.getAttribute('data-k')]=sel.value; _tmSaveRules(); tmRecalc(); }  // value '' = sem regra (usa o nome do status)
 function tmResetRules(){
   TM_RULES=_tmDefaultRules(); try{localStorage.removeItem(TM_STORE);}catch(e){}
   tmRecalc();
@@ -183,9 +185,9 @@ function tmRecalc(){
   var locOpts=TM_LOCS.map(function(l){return l.n;});
   var rulesH=Object.keys(present).sort().map(function(k){
     var cur=TM_RULES[k], known=!!cur;
-    var opts=locOpts.map(function(n){return '<option value="'+escAttr(n)+'"'+(n===(cur||TM_TISI)?' selected':'')+'>'+escAttr(n.length>52?n.slice(0,50)+'…':n)+'</option>';}).join('');
+    var opts='<option value=""'+(cur?'':' selected')+'>— usar o nome do status —</option>'+locOpts.map(function(n){return '<option value="'+escAttr(n)+'"'+(n===cur?' selected':'')+'>'+escAttr(n.length>52?n.slice(0,50)+'…':n)+'</option>';}).join('');
     return '<div class="tm-rule"><span class="tm-st">'+escAttr(k)+'</span><span class="tm-n">'+present[k]+'d</span>'
-      +'<select class="imp-select'+(known?'':' no-match')+'" data-k="'+escAttr(k)+'" onchange="tmSetRule(this)">'+opts+'</select>'+(known?'':'<span class="tm-warn">sem regra → TISI</span>')+'</div>';
+      +'<select class="imp-select'+(known?'':' no-match')+'" data-k="'+escAttr(k)+'" onchange="tmSetRule(this)">'+opts+'</select>'+(known?'':'<span class="tm-warn">sem regra → sai como "'+escAttr(k)+'"</span>')+'</div>';
   }).join('');
   document.getElementById('tmRules').innerHTML=rulesH||'<div class="si-empty">Nenhum status no período.</div>';
   // resumo + tabela
@@ -194,7 +196,7 @@ function tmRecalc(){
   var h='<div class="imp-stats"><span><b>'+nR+'</b> linha'+(nR!==1?'s':'')+' · <b>'+nT+'</b> técnico'+(nT!==1?'s':'')+' · '+(rg.e-rg.s+1)+' dias</span></div>'
     +'<div class="tm-sum">'+locs.slice(0,8).map(function(l){return '<span class="tm-chip"><b>'+res.perLoc[l]+'d</b> '+escAttr(l.length>40?l.slice(0,38)+'…':l)+'</span>';}).join('')+(locs.length>8?'<span class="tm-chip">+'+(locs.length-8)+' tomadores</span>':'')+'</div>';
   var unk=Object.keys(res.unknown);
-  if(unk.length) h+='<div class="si-warn">Status sem regra (contados como TISI): '+unk.map(function(k){return escAttr(k)+' ('+res.unknown[k]+'d)';}).join(', ')+' — ajuste em "Regras" abaixo.</div>';
+  if(unk.length) h+='<div class="si-warn">Status sem regra (saem com o próprio nome na Descrição Lotação, pra você ajustar depois): '+unk.map(function(k){return escAttr(k)+' ('+res.unknown[k]+'d)';}).join(', ')+' — ajuste em "Regras" abaixo.</div>';
   h+='<div class="si-diff"><table class="si-tbl"><thead><tr><th>Matrícula</th><th>Nome</th><th>Início</th><th>Final</th><th>Retorno</th><th>Qtde</th><th>Tomador</th></tr></thead><tbody>'
     +res.rows.map(function(r){
       var d=function(x){return String(x.getDate()).padStart(2,'0')+'/'+String(x.getMonth()+1).padStart(2,'0');};
