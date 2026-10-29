@@ -219,11 +219,15 @@ function generateTomador(){
   toast('Relatório gerado: '+fname,'#1fc98e');
 }
 
-/* leque do botão "Relatório": escolhe entre o relatório de apuração e o Tomador de Obras */
-function toggleReportMenu(ev){
+/* leques do cabeçalho (Relatório e Importar): um aberto por vez; fecha ao clicar fora ou com Esc */
+function _toggleMenu(ev, id){
   if(ev) ev.stopPropagation();
-  document.getElementById('reportMenu').classList.toggle('open');
+  var m=document.getElementById(id), was=m.classList.contains('open');
+  closeReportMenu();
+  if(!was) m.classList.add('open');
 }
-function closeReportMenu(){ var m=document.getElementById('reportMenu'); if(m) m.classList.remove('open'); }
+function toggleReportMenu(ev){ _toggleMenu(ev,'reportMenu'); }
+function toggleImportMenu(ev){ _toggleMenu(ev,'importMenu'); }
+function closeReportMenu(){ document.querySelectorAll('.rep-menu.open').forEach(function(m){m.classList.remove('open');}); }
 document.addEventListener('click',function(e){ if(!e.target.closest||!e.target.closest('.rep-wrap')) closeReportMenu(); });
 document.addEventListener('keydown',function(e){ if(e.key==='Escape') closeReportMenu(); });

@@ -65,15 +65,18 @@
         <button onclick="closeReportMenu();openTomadorModal()"><b>Tomador de Obras</b><span>Para quem cada técnico prestou serviço · Início, Final, Retorno</span></button>
       </div>
     </div>
-    <button class="hdr-btn" onclick="document.getElementById(&#39;importScaleInput&#39;).click()" title="Importar a escala (status, folga, observações) de uma planilha .xlsx no formato do Relatório, escolhendo o período">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-      Importar Escala
-    </button>
+    <div class="rep-wrap">
+      <button class="hdr-btn" onclick="toggleImportMenu(event)" title="Importar dados de planilhas .xlsx">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+        Importar
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="margin-left:2px"><polyline points="6 9 12 15 18 9"></polyline></svg>
+      </button>
+      <div class="rep-menu" id="importMenu">
+        <button onclick="closeReportMenu();document.getElementById('importScaleInput').click()"><b>Importar escala</b><span>Planilha mestre ou Relatório · escolhe o período e vê a prévia antes de gravar</span></button>
+        <button onclick="closeReportMenu();document.getElementById('importHrsInput').click()"><b>Importar horas</b><span>Horas reais de um .xlsx (hr_reais)</span></button>
+      </div>
+    </div>
     <input type="file" id="importScaleInput" accept=".xlsx" style="display:none" onchange="loadScaleFile(this)">
-    <button class="hdr-btn" onclick="document.getElementById(&#39;importHrsInput&#39;).click()" title="Importar horas de arquivo .xlsx">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-      Importar Horas
-    </button>
     <input type="file" id="importHrsInput" accept=".xlsx" style="display:none" onchange="loadImportFile(this)">
     <button class="hdr-btn" onclick="clearImportedHours()" title="Apaga todas as horas reais importadas (hr_reais), pra reimportar do zero">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>

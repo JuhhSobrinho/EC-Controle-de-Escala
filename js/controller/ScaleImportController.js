@@ -194,6 +194,7 @@ function _siBuildUI(){
        +'<label><input type="checkbox" id="siOptObs" checked onchange="siRecalc()"> Observações</label>')+'</div>'
     +'<label class="si-clear"><input type="checkbox" id="siOptClear" onchange="siRecalc()"> Célula vazia na planilha <b>apaga</b> o valor que está no sistema (desmarcado = só preenche e altera)</label>'
     +(grid?'<div class="si-note">Grafias equivalentes não contam como alteração (FOLGA. = FOLGA, TREIN. = TREINAM., P-MXL = PMXL, DISP = FOLGA, EMB. = EMB, DES. = DES). Ao importar, o status vai na grafia do sistema.</div>':'')
+    +'<label class="si-clear"><input type="checkbox" id="siOptFill" '+(_siFillPref()?'checked':'')+' onchange="siFillSave();siRecalc()"> Dias <b style="color:var(--accent)">vazios</b> (na planilha e no sistema) viram <b style="color:var(--accent)">FOLGA</b> — assim o relatório Tomador de Obras fecha o período sem buracos</label>'
     +'<div id="siPreview"></div>'
     +'<details class="si-sheets"><summary>'+(grid?'Técnicos da planilha':'Abas e técnicos')+' ('+matched+'/'+_si.sheets.length+' casados'+(grid?', por SISPAT ou nome':'')+')</summary><div style="margin-top:6px">'+sheetRows+'</div></details>'
     +(_si.skipped.length?'<div class="si-warn">Abas ignoradas (sem as colunas Data e Local / Status): '+_si.skipped.map(escAttr).join(', ')+'</div>':'');
@@ -203,6 +204,9 @@ function _siBuildUI(){
   document.getElementById('siTo').value=hi<lo?lo:hi;
   siRecalc();
 }
+
+function _siFillPref(){ try{ return localStorage.getItem('ec_si_fill')==='1'; }catch(e){ return false; } }
+function siFillSave(){ try{ localStorage.setItem('ec_si_fill', document.getElementById('siOptFill').checked?'1':'0'); }catch(e){} }
 
 function siSheetMap(sel){
   var s=_si.sheets[+sel.getAttribute('data-si')];
@@ -223,7 +227,8 @@ function siQuick(kind){
 function siRecalc(){
   var from=document.getElementById('siFrom').value, to=document.getElementById('siTo').value;
   var oS=document.getElementById('siOptStatus').checked, oF=document.getElementById('siOptFolga').checked,
-      oO=document.getElementById('siOptObs').checked, oC=document.getElementById('siOptClear').checked;
+      oO=document.getElementById('siOptObs').checked, oC=document.getElementById('siOptClear').checked,
+      oFill=document.getElementById('siOptFill').checked;
   var diffs=[], outside=0, byField={status:0,folga:0,obs:0}, techs={};
   _si.sheets.forEach(function(s){
     if(s.ti<0) return;
@@ -235,9 +240,12 @@ function siRecalc(){
       var r=s.rows[iso], patch={}, lines=[];
       var oldS=(t.d[di]||'').trim(), oldF=t.fo[di]?1:0, oldO=(t.obs[di]||'').trim();
       var newS=oldS;
-      if(oS&&(r.status!==''||oC)&&_siKey(r.status)!==_siKey(oldS)){
-        var ns=_siCanon(r.status);
-        patch.status=ns;newS=ns;lines.push(['Status',oldS||'—',ns||'—']);byField.status++;
+      // planilha vazia + "vazio vira FOLGA": preenche FOLGA onde o sistema também está vazio (e, com "célula vazia apaga", no lugar de limpar)
+      var srcStatus=r.status;
+      if(oS&&oFill&&srcStatus===''&&(oldS===''||oC)) srcStatus='FOLGA';
+      if(oS&&(srcStatus!==''||oC)&&_siKey(srcStatus)!==_siKey(oldS)){
+        var ns=_siCanon(srcStatus);
+        patch.status=ns;newS=ns;lines.push(['Status',oldS||'—',ns||'—']);byField.status++; if(srcStatus!==r.status) byField.fill=(byField.fill||0)+1;
       }
       if(oF&&r.hasCem){
         var impliedByStatus=newS.toUpperCase().indexOf('F.EMB')===0;
@@ -252,7 +260,7 @@ function siRecalc(){
   _si.diffs=diffs;
   var nT=Object.keys(techs).length, el=document.getElementById('siPreview');
   var h='<div class="imp-stats" style="margin-top:12px"><span><b>'+diffs.length+'</b> dia'+(diffs.length!==1?'s':'')+' com alteração em <b>'+nT+'</b> técnico'+(nT!==1?'s':'')+'</span>'
-    +'<span style="margin-left:auto;color:var(--text3)">status '+byField.status+' · folga '+byField.folga+' · obs. '+byField.obs+'</span></div>';
+    +'<span style="margin-left:auto;color:var(--text3)">status '+byField.status+(byField.fill?' (dos quais '+byField.fill+' vazios→FOLGA)':'')+' · folga '+byField.folga+' · obs. '+byField.obs+'</span></div>';
   if(outside) h+='<div class="si-warn">'+outside+' linha(s) fora do calendário do sistema foram ignoradas.</div>';
   if(!diffs.length) h+='<div class="si-empty">Nada para alterar nesse período — o sistema já está igual à planilha.</div>';
   else{
