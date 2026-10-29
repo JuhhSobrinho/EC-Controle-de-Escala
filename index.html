@@ -538,9 +538,10 @@
       <button class="modal-close" onclick="closeTomador()">×</button>
     </div>
     <div class="modal-body" style="overflow-y:auto;max-height:66vh">
-      <div class="form-label">Período</div>
-      <div class="si-row"><input class="date-input" type="date" id="tmFrom" onchange="tmRecalc()"><span class="dash-sep">→</span><input class="date-input" type="date" id="tmTo" onchange="tmRecalc()">
+      <div class="form-label">Mês de apuração</div>
+      <div class="si-row"><input class="date-input" type="month" id="tmMonth" onchange="tmMonthChange()">
         <button class="period-btn" onclick="tmQuick('prev')">Mês anterior</button><button class="period-btn" onclick="tmQuick('cur')">Este mês</button></div>
+      <div class="si-note" id="tmRangeLbl" style="margin-top:-4px;margin-bottom:8px"></div>
       <details class="si-sheets"><summary>Técnicos no relatório</summary><div id="tmTecs" class="tm-tecs"></div></details>
       <details class="si-sheets"><summary>Regras: status → tomador (editáveis)</summary>
         <div class="si-note" style="margin-top:6px">Folga, base, férias, treinamento e desembarque = TISI. Plataforma = tomador da unidade. MOB./EMB./T.EMB. seguem o tomador do destino. Mudanças ficam salvas neste navegador.</div>

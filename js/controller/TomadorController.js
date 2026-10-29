@@ -119,15 +119,15 @@ function tmBuildRows(s, e, tis){
   return {rows:rows,unknown:unknown,perLoc:perLoc};
 }
 
-/* ── janela ── */
+/* ── janela ──
+   O relatório é MENSAL: do dia 1 ao último dia do mês escolhido; o Retorno do último trecho é o dia 1 do mês seguinte. */
 var _tm={s:0,e:0,sel:{}};
-function _tmIso(idx){var p=DATES[idx].split('/');return p[2]+'-'+p[1]+'-'+p[0];}
+function _tmMonthVal(offset){
+  var n=new Date(), d=new Date(n.getFullYear(),n.getMonth()+offset,1);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+}
 function openTomadorModal(){
-  var now=new Date(), first=new Date(now.getFullYear(),now.getMonth()-1,1), last=new Date(now.getFullYear(),now.getMonth(),0);
-  var fmt=function(d){return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();};
-  _tm.s=Math.max(0,DATES.indexOf(fmt(first))); _tm.e=Math.max(_tm.s,DATES.indexOf(fmt(last)));
-  document.getElementById('tmFrom').value=_tmIso(_tm.s);
-  document.getElementById('tmTo').value=_tmIso(_tm.e);
+  document.getElementById('tmMonth').value=_tmMonthVal(-1);
   document.getElementById('tomadorOverlay').classList.add('open');
   tmAutoSelect();
   tmRecalc();
@@ -143,23 +143,24 @@ function tmAutoSelect(){
 }
 function closeTomador(){document.getElementById('tomadorOverlay').classList.remove('open');}
 function tmQuick(kind){
-  var now=new Date(), a, b;
-  if(kind==='prev'){a=new Date(now.getFullYear(),now.getMonth()-1,1);b=new Date(now.getFullYear(),now.getMonth(),0);}
-  else{a=new Date(now.getFullYear(),now.getMonth(),1);b=new Date(now.getFullYear(),now.getMonth()+1,0);}
-  var iso=function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
-  document.getElementById('tmFrom').value=iso(a); document.getElementById('tmTo').value=iso(b);
-  tmAutoSelect();
-  tmRecalc();
+  document.getElementById('tmMonth').value=_tmMonthVal(kind==='prev'?-1:0);
+  tmMonthChange();
 }
+function tmMonthChange(){ tmAutoSelect(); tmRecalc(); }
 function tmToggleTec(ti,on){ _tm.sel[ti]=!!on; tmRecalc(); }
 function tmSetRule(sel){ TM_RULES[sel.getAttribute('data-k')]=sel.value; _tmSaveRules(); tmRecalc(); }
 function tmResetRules(){
   TM_RULES=_tmDefaultRules(); try{localStorage.removeItem(TM_STORE);}catch(e){}
   tmRecalc();
 }
+/* mês escolhido (aaaa-mm) → índices do 1º e do último dia no calendário do sistema */
 function _tmRange(){
-  var f=idxOf(fromISO(document.getElementById('tmFrom').value)), t=idxOf(fromISO(document.getElementById('tmTo').value));
-  return (f===null||t===null||f>t)?null:{s:f,e:t};
+  var m=String(document.getElementById('tmMonth').value||'').match(/^(\d{4})-(\d{2})$/);
+  if(!m) return null;
+  var y=+m[1], mo=+m[2];
+  var last=new Date(y,mo,0).getDate(), pad=function(n){return String(n).padStart(2,'0');};
+  var f=idxOf('01/'+pad(mo)+'/'+y), t=idxOf(pad(last)+'/'+pad(mo)+'/'+y);
+  return (f===null||t===null)?null:{s:f,e:t};
 }
 
 function tmRecalc(){
@@ -167,6 +168,9 @@ function tmRecalc(){
   var applyBtn=document.getElementById('tmGenBtn');
   if(!rg){ box.innerHTML='<div class="si-warn">Escolha um período válido dentro do calendário do sistema.</div>'; applyBtn.disabled=true; return; }
   _tm.s=rg.s; _tm.e=rg.e;
+  var nxt=_tmDate(rg.e); nxt.setDate(nxt.getDate()+1);
+  var f2=function(d){return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();};
+  document.getElementById('tmRangeLbl').textContent=DATES[rg.s]+' a '+DATES[rg.e]+' · '+(rg.e-rg.s+1)+' dias · Retorno do último trecho: '+f2(nxt);
   var tis=Object.keys(_tm.sel).filter(function(k){return _tm.sel[k];}).map(Number);
   var res=tmBuildRows(rg.s,rg.e,tis);
   _tm.last=res;
