@@ -1,6 +1,6 @@
 # EC-Controle-de-Escala
 
-Contribute to JuhhSobrinho/EC-Controle-de-Escala development by creating an account on GitHub.
+Descrição do projeto em breve.
 
 ## Sobre
 
@@ -8,7 +8,7 @@ Projeto desenvolvido por [Juliano Sobrinho](https://github.com/JuhhSobrinho).
 
 ## Tecnologias
 
-Arquivos principais do projeto: `.js`, `.json`, `.html`, `.css.
+Arquivos principais do projeto: `.js`, `.md`, `.json`, `.html`, `.css`.
 
 ## Como executar
 
