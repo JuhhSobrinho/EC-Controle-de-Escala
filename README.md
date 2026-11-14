@@ -1,5 +1,7 @@
 # EC-Controle-de-Escala
 
+![Dashboard do EC-Controle-de-Escala, com nomes reduzidos ao primeiro nome](docs/dashboard-tecnicos.png)
+
 Aplicação web para controle de escala de técnicos embarcados. Permite acompanhar, dia a dia, o status de cada técnico (trabalho, folga, férias, treinamento, etc.), prever escalas em bloco, controlar horas reais e extras, e gerar relatórios em Excel. Os dados ficam em um banco Supabase, com sincronização automática a cada alteração, o que substitui planilhas espalhadas e facilita a consolidação mensal.
 
 ## Funcionalidades
